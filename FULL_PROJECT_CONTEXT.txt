@@ -1,0 +1,3317 @@
+### STRUKTURA PROJEKTA ###
+retro-shooter/
+    Blueprint.md
+    index.html
+    manifest.json
+    README.md
+    css/
+        style.css
+    retroshoter/
+    src/
+        Game.js
+        core/
+            Engine.js
+            Input.js
+            Sound.js
+        entities/
+            Bonus.js
+            Boss.js
+            Bullet.js
+            Enemy.js
+            Entity.js
+            Player.js
+        systems/
+            AnalyticsSystem.js
+            BackgroundSystem.js
+            BonusSystem.js
+            BulletSystem.js
+            Collision.js
+            EnemyBulletSystem.js
+            EnemySystem.js
+            LevelSystem.js
+            Particle.js
+            ParticleSystem.js
+            Starfield.js
+
+==================================================
+
+START OF FILE: Blueprint.md
+--------------------
+# Blueprint: Project "Cognitive Odyssey"
+
+## 1. Koncept i Vizija
+
+Igra zadržava tvoju **8-bit/16-bit estetiku** sa **CRT scanline efektima** kako bi se kandidat osećao kao da igra nostalgični arkadni naslov, dok sistem u pozadini vrši analizu kognitivnih sposobnosti.
+
+## 2. Mapiranje HR Metrike na Game Mechanic
+
+|**HR Parametar**|**Mehanika u tvojoj igri**|**Tehnička implementacija**|
+|---|---|---|
+|**Radna Memorija**|Navigacioni kodovi|Modifikacija `LevelSystem.js` najava.|
+|**Pažnja**|IFF (Identification Friend or Foe)|Proširenje `EnemySystem.js` i `Enemy.js`.|
+|**Multitasking**|System Stabilizers|Novi UI elementi u `ui-layer` unutar `index.html`.|
+|**Numerička Obrada**|Smart Power-ups|Modifikacija `Bonus.js` i `BonusSystem.js`.|
+
+---
+
+## 3. Novi Sistemski Moduli (Roadmap)
+
+### Faza 1: Fondacija Analitike (`AnalyticsSystem.js`)
+
+- **Zadatak:** Kreiranje novog modula koji prati `timestamp` svakog bitnog događaja (pucanj, pogodak, greška).
+    
+- **Integracija:** Povezivanje sa `Game.js` kako bi se podaci prikupljali u realnom vremenu.
+    
+
+### Faza 2: Modul za Radnu Memoriju
+
+- **Zadatak:** Pre svakog nivoa u `LevelSystem.js`, prikazati trocifrenu sekvencu.
+    
+- **Interakcija:** Tokom nivoa, igrač mora da pritisne tastere koji odgovaraju sekvenci kada se pojavi "Memory Prompt".
+    
+
+### Faza 3: Selektivna Pažnja
+
+- **Zadatak:** Uvođenje "Civilnih brodova" u `EnemySystem.js`.
+    
+- **Kazna:** Ako igrač uništi civilni brod, `CollisionSystem.js` beleži pad u "Inhibiciji impulsa", a ne samo gubitak poena.
+    
+
+### Faza 4: Matematički Bonusi
+
+- **Zadatak:** Unutar `Bonus.js`, pored tipa (BOMB, SPREAD), dodajemo tekstualnu labelu sa brojem.
+    
+- **Logika:** Igrač dobija instrukciju: "Pokupi samo parne brojeve".
+    
+
+---
+
+## 4. Arhitektura Podataka (Backend Integration)
+
+Kada `Game.js` okine `triggerGameOver()` ili `triggerVictory()`, igra će generisati finalni izveštaj.
+
+JavaScript
+
+```
+{
+  "session_info": { "user": "Bojan", "duration": "300s" },
+  "metrics": {
+    "attention_span": 0.92,       // Procenat pogođenih neprijatelja vs civila
+    "memory_accuracy": 0.80,     // Tačnost unetih kodova
+    "math_speed_avg": "1.2s",    // Vreme potrebno za odluku kod bonusa
+    "stress_recovery": "0.5s"    // Vreme reakcije nakon što izgubi HP [cite: 332, 338]
+  }
+}
+```
+
+---
+
+## 5. Tehnološki Stack (Potvrda tvoje osnove)
+
+- **Frontend:** Vanilla JS (tvoj trenutni kod).
+    
+- **Engine:** Tvoj Custom `Engine.js`.
+    
+- **Styling:** Tvoj `style.css` sa CRT filterima.
+    
+- **Novi dodatak:** `fetch` API za slanje rezultata na tvoj Python/FastAPI backend.
+--------------------
+END OF FILE: Blueprint.md
+
+START OF FILE: index.html
+--------------------
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png"> 
+
+    <title>Retro Space Shooter</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    
+</head>
+<body>
+    
+    <div id="game-container">
+
+        <div id="ui-layer">
+            <div id="name-input-section">
+                <h1>IDENTIFIKACIJA KANDIDATA</h1>
+                <div class="input-group">
+                    <label>UNESITE IME I PREZIME:</label>
+                    <input type="text" id="candidate-name" placeholder="Npr: Bojan Pejić" autocomplete="off">
+                </div>
+                <button id="next-to-briefing-btn">POTVRDI IDENTITET</button>
+            </div>
+            <div id="intro-screen">
+                <div class="terminal-box">
+                    <h1 class="glitch-text">COGNITIVE ODYSSEY</h1>
+                    <h2>[ CANDIDATE EVALUATION PROTOCOL ]</h2>
+                    
+                    <div class="instructions-content">
+                        <p><span class="highlight">MISIJA:</span> Odbrana sektora uz minimalnu kolateralnu štetu.</p>
+                        
+                        <p><span class="highlight">1. KONTROLE:</span><br>
+                        • <b>Desktop:</b> Strelice (ili WASD) za kretanje. SPACE za pucanje.<br>
+                        • <b>Mobilni:</b> Virtuelni džojstik (levo) za kretanje. FIRE dugme (desno) za pucanje.</p>
+                        
+                        <p><span class="highlight">2. PRAVILA ANGAŽOVANJA:</span><br>
+                        • <span style="color: #ff0055;">NEPRIJATELJI:</span> Uništiti sve. Donose poene.<br>
+                        • <span style="color: #ffffff;">CIVILI (Beli krugovi sa krstom):</span> <b>NE PUCAJTE!</b> Uništavanje civila donosi kaznu od -500 poena i beleži se kao pad u inhibiciji impulsa.</p>
+                        
+                        <p><span class="highlight">3. SYSTEM LOCK (RADNA MEMORIJA):</span><br>
+                        • Pre svakog sektora, na 3 sekunde će se prikazati sigurnosna šifra (slova A, B, C, X). <b>ZAPAMTITE JE.</b><br>
+                        • Kada se sistem zaključa usred borbe, unesite šifru na tastaturi (ili preko virtuelnih tastera) što brže možete.</p>
+                    </div>
+            
+                    <button id="start-mission-btn">RAZUMEM - POKRENI EVALUACIJU</button>
+                </div>
+            </div>
+            
+            <div id="hud">SCORE: <span id="score">0</span></div>
+            <div id="lives-display">HP: <span id="lives-count">❤️❤️❤️</span></div>
+            <div id="memory-preview-screen" style="display: none;">
+                <div class="memory-container">
+                    <p>MEMORIZE SEQUENCE:</p>
+                    <h1 id="big-memory-sequence">A B X</h1>
+                </div>
+            </div>
+            <div id="memory-input-overlay" style="display: none;">
+                <div class="neon-box">
+                    <h2 id="memory-prompt-text">SYSTEM LOCK</h2>
+                    <div id="input-display">_ _ _</div>
+                    <p>RE-ENTER SECURITY SEQUENCE</p>
+                </div>
+                <div id="virtual-keyboard">
+                    <button class="mem-btn" data-key="KeyA">A</button>
+                    <button class="mem-btn" data-key="KeyB">B</button>
+                    <button class="mem-btn" data-key="KeyC">C</button>
+                    <button class="mem-btn" data-key="KeyX">X</button>
+                </div>
+            </div>
+
+            <div id="level-screen" style="display: none;">
+                <h2 id="level-title">LEVEL 1</h2>
+                <p id="level-subtitle">SECTOR ALPHA</p>
+                </div>
+
+            <div id="boss-hud" style="display: none;">
+                <div class="boss-name">⚠️ MOTHERSHIP DETECTED ⚠️</div>
+                <div class="hp-bar-bg">
+                    <div id="hp-bar-fill"></div>
+                </div>
+            </div>
+
+            
+
+            <div id="game-over-screen" style="display: none;">
+                <h1>GAME OVER</h1>
+                <p>FINAL SCORE: <span id="final-score">0</span></p>
+                <button id="restart-btn">REBOOT SYSTEM</button>
+            </div>
+
+            <div id="mobile-controls">
+                <div id="joystick-zone">
+                    <div id="joystick-base">
+                        <div id="joystick-stick"></div>
+                    </div>
+                </div>
+                <div id="fire-btn">FIRE</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="src/Game.js"></script>
+</body>
+</html>
+--------------------
+END OF FILE: index.html
+
+START OF FILE: manifest.json
+--------------------
+{
+  "name": "Retro Space Shooter",
+  "short_name": "RetroShooter",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+--------------------
+END OF FILE: manifest.json
+
+START OF FILE: README.md
+--------------------
+
+--------------------
+END OF FILE: README.md
+
+START OF FILE: css\style.css
+--------------------
+/* --- OSNOVA (Pozadina oko igre) --- */
+body {
+    margin: 0;
+    background: #111; /* Tamno siva pozadina van igre */
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;            /* Flexbox za centriranje */
+    justify-content: center;  /* Horizontalno centriranje */
+    align-items: center;      /* Vertikalno centriranje */
+    touch-action: none;
+    font-family: 'VT323', 'Courier New', monospace;
+    user-select: none;
+}
+
+/* --- GLAVNI KONTEJNER IGRE --- */
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 600px; /* MAKSIMALNA ŠIRINA NA DESKTOPU (ovde podešavaš širinu) */
+    background: #000;
+    box-shadow: 0 0 50px rgba(0, 255, 0, 0.1); /* Blagi sjaj oko ivica igre */
+    overflow: hidden; /* Odseca sve što izleti van okvira */
+}
+
+/* --- GAME ENGINE --- */
+canvas {
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #050505;
+    image-rendering: pixelated;
+    z-index: 0;
+}
+
+/* --- CRT SCANLINE EFEKAT (Sada samo unutar kontejnera) --- */
+#game-container::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* --- UI LAYER --- */
+#ui-layer {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+#lives-display {
+    position: absolute;
+    top: 20px; right: 20px;
+    color: #ff0055;
+    font-size: 24px;
+    text-shadow: 0 0 5px #ff0055;
+    letter-spacing: 5px;
+}
+
+/* HUD */
+#hud {
+    position: absolute;
+    top: 20px; left: 20px;
+    color: #00ff00;
+    font-size: 28px;
+    text-shadow: 0 0 5px #00ff00;
+    letter-spacing: 2px;
+}
+
+/* BOSS BAR */
+#boss-hud {
+    position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+    width: 80%; max-width: 400px;
+    text-align: center; color: #ff0000;
+    text-shadow: 0 0 5px #ff0000;
+    animation: flashText 1s infinite alternate;
+}
+.boss-name { font-size: 24px; margin-bottom: 5px; }
+.hp-bar-bg {
+    width: 100%; height: 15px; border: 2px solid #ff0000;
+    background: rgba(50, 0, 0, 0.5);
+}
+#hp-bar-fill {
+    width: 100%; height: 100%; background: #ff0000;
+    box-shadow: 0 0 10px #ff0000; transition: width 0.2s;
+}
+
+#level-screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 50;
+    pointer-events: none; /* Da igra teče ispod */
+    animation: fadeInOut 4s forwards; /* Pojavi se i nestane za 4s */
+}
+
+#level-title {
+    font-size: 60px; color: #00ffff; margin: 0;
+    text-shadow: 0 0 20px #00ffff;
+    letter-spacing: 10px;
+}
+
+#level-subtitle {
+    font-size: 24px; color: #fff; margin-top: 10px;
+    letter-spacing: 5px; text-transform: uppercase;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: scale(0.9); }
+    20% { opacity: 1; transform: scale(1); }
+    80% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.1); }
+}
+
+@keyframes flashText {
+    0% { opacity: 0.8; }
+    100% { opacity: 1; text-shadow: 0 0 15px red; }
+}
+
+/* --- GAME OVER SCREEN --- */
+#game-over-screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    pointer-events: auto;
+}
+
+#game-over-screen h1 {
+    color: #ff0000;
+    font-size: 80px; margin: 0;
+    text-shadow: 5px 5px 0px #550000;
+    letter-spacing: 5px;
+    text-align: center;
+    line-height: 1;
+}
+
+#game-over-screen p {
+    color: #00ff00;
+    font-size: 30px; margin: 20px 0 50px 0;
+}
+
+#restart-btn {
+    background: transparent;
+    border: 3px solid #00ff00;
+    color: #00ff00;
+    padding: 15px 50px;
+    font-family: inherit;
+    font-size: 30px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    box-shadow: 0 0 15px #00ff00;
+}
+
+#restart-btn:hover {
+    background: #00ff00;
+    color: #000;
+    box-shadow: 0 0 30px #00ff00;
+}
+#restart-btn:active { transform: scale(0.95); }
+
+/* --- MOBILE CONTROLS --- */
+#mobile-controls {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
+    display: none; pointer-events: none; z-index: 20;
+}
+
+/* Prikaži kontrole na touch uređajima ILI malim ekranima */
+@media (pointer: coarse), (max-width: 1024px) {
+    #mobile-controls { display: block; }
+}
+
+#joystick-zone {
+    position: absolute; bottom: 30px; left: 30px;
+    width: 120px; height: 120px;
+    pointer-events: auto;
+}
+
+#joystick-base {
+    width: 100%; height: 100%;
+    background: rgba(0, 255, 0, 0.05);
+    border: 2px solid rgba(0, 255, 0, 0.3);
+    border-radius: 50%;
+    position: relative;
+    backdrop-filter: blur(2px);
+}
+
+#joystick-stick {
+    width: 50px; height: 50px;
+    background: rgba(0, 255, 0, 0.5);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.6);
+}
+
+#fire-btn {
+    position: absolute; bottom: 30px; right: 30px;
+    width: 100px; height: 100px;
+    background: rgba(255, 0, 0, 0.15);
+    border: 2px solid rgba(255, 0, 0, 0.5);
+    border-radius: 50%;
+    color: rgba(255, 50, 50, 0.9);
+    display: flex; justify-content: center; align-items: center;
+    font-size: 20px; font-weight: bold;
+    pointer-events: auto;
+    backdrop-filter: blur(2px);
+    animation: pulseBtn 2s infinite;
+}
+
+#fire-btn:active {
+    background: rgba(255, 0, 0, 0.5);
+    transform: scale(0.95);
+}
+
+@keyframes pulseBtn {
+    0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(255, 0, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+}
+
+#memory-input-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    text-align: center;
+    pointer-events: none;
+}
+
+.neon-box {
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #ff00ff;
+    padding: 20px;
+    box-shadow: 0 0 20px #ff00ff, inset 0 0 10px #ff00ff;
+    font-family: 'VT323', monospace;
+}
+
+#input-display {
+    font-size: 48px;
+    color: #00ffff;
+    letter-spacing: 10px;
+    margin: 10px 0;
+    text-shadow: 0 0 10px #00ffff;
+}
+
+#memory-prompt-text {
+    color: #ff00ff;
+    margin: 0;
+    animation: blink 0.5s infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+/* Virtuelna tastatura za System Lock */
+#virtual-keyboard {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+    pointer-events: auto; /* Jako bitno da bi radili klikovi na overlay-u */
+}
+
+.mem-btn {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ffff;
+    color: #00ffff;
+    font-family: 'VT323', monospace;
+    font-size: 32px;
+    width: 60px;
+    height: 60px;
+    cursor: pointer;
+    box-shadow: 0 0 10px #00ffff, inset 0 0 5px #00ffff;
+    text-transform: uppercase;
+    transition: all 0.1s;
+}
+
+.mem-btn:active {
+    background: #00ffff;
+    color: #000;
+    transform: scale(0.9);
+}
+
+/* Omogućavamo klikove na ceo overlay kad je aktivan */
+#memory-input-overlay {
+    pointer-events: auto !important; 
+}
+
+#memory-preview-screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.95); /* Skoro potpuno crno za maksimalan kontrast */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    text-align: center;
+}
+
+.memory-container p {
+    color: #00ffff;
+    font-size: 24px;
+    letter-spacing: 5px;
+    margin-bottom: 20px;
+}
+
+#big-memory-sequence {
+    color: #ff00ff;
+    font-size: 120px; /* Ekstremno velika slova */
+    text-shadow: 0 0 30px #ff00ff, 0 0 60px #ff00ff;
+    letter-spacing: 20px;
+    margin: 0;
+    animation: pulseMemory 1s infinite;
+}
+
+@keyframes pulseMemory {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+}   
+
+/* --- INTRO SCREEN --- */
+#intro-screen {
+    position: absolute;
+    top: 0; left: 0; 
+    width: 100%; height: 100%;
+    background: #050505 !important; /* Totalno neprozirno crno */
+    z-index: 9999 !important; /* Iznad svakog drugog elementa */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+}
+
+/* Opciono: Dodaj ovo da osiguraš da se HUD ne vidi "kroz" ivice na nekim rezolucijama */
+#ui-layer {
+    z-index: 5;
+}
+
+.terminal-box {
+    background: rgba(10, 15, 10, 0.95); /* Tamnija i čistija pozadina */
+    border: 2px solid #3cb371; /* Medium Sea Green - mirnija ivica */
+    box-shadow: 0 0 15px rgba(60, 179, 113, 0.2); /* Suptilniji sjaj kutije */
+    padding: 30px;
+    width: 85%;
+    max-width: 500px;
+    text-align: left;
+    color: #c8e6c9; /* Pastelno svetlo zelena - PUNO lakša za oči */
+    font-family: 'VT323', monospace;
+}
+
+.terminal-box h1.glitch-text {
+    font-size: 40px;
+    text-align: center;
+    margin: 0 0 10px 0;
+    color: #64ffda; /* Blaga cijan boja */
+    text-shadow: 2px 2px 0px rgba(255, 0, 255, 0.4); /* Ublažen glitch sjaj */
+    letter-spacing: 2px;
+}
+
+.terminal-box h2 {
+    font-size: 20px;
+    text-align: center;
+    color: #64ffda;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+}
+
+.instructions-content p {
+    font-size: 20px;
+    line-height: 1.4;
+    margin-bottom: 15px;
+    /* NAJBITNIJE: Uklonjen text-shadow sa običnog teksta! */
+    text-shadow: none; 
+}
+
+.instructions-content .highlight {
+    color: #ffaa00; /* Upozoravajuća žuta/narandžasta za naslove */
+    text-shadow: 0 0 5px #ffaa00;
+}
+
+/* Dugme */
+#start-mission-btn {
+    display: block;
+    width: 100%;
+    background: rgba(60, 179, 113, 0.1); /* Blaga ispuna umesto potpuno prozirnog */
+    border: 2px solid #3cb371;
+    color: #c8e6c9;
+    padding: 15px;
+    font-family: inherit;
+    font-size: 24px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    margin-top: 25px;
+}
+
+#start-mission-btn:hover {
+    background: #3cb371;
+    color: #000;
+    box-shadow: 0 0 15px rgba(60, 179, 113, 0.5);
+}
+
+#start-mission-btn:active {
+    transform: scale(0.98);
+}
+
+#name-input-section, #briefing-section {
+    max-width: 500px;
+    width: 90%;
+}
+
+.input-group {
+    margin: 30px 0;
+    border-bottom: 2px solid #3cb371;
+    padding-bottom: 5px;
+}
+
+#candidate-name {
+    background: transparent;
+    border: none;
+    color: #00ff00;
+    font-family: 'VT323', monospace; /* Tvoj retro font */
+    font-size: 28px;
+    width: 100%;
+    outline: none;
+    text-align: center;
+}
+
+#candidate-name::placeholder {
+    color: #1a5c3a;
+}
+--------------------
+END OF FILE: css\style.css
+
+START OF FILE: src\Game.js
+--------------------
+import { Engine } from './core/Engine.js';
+import { InputHandler } from './core/Input.js';
+import { SoundSystem } from './core/Sound.js';
+
+// Entiteti
+import { Player } from './entities/Player.js';
+import { Boss } from './entities/Boss.js';
+
+// Sistemi
+import { StarfieldSystem } from './systems/Starfield.js';
+import { BackgroundSystem } from './systems/BackgroundSystem.js';
+import { LevelSystem } from './systems/LevelSystem.js';
+import { BulletSystem } from './systems/BulletSystem.js';
+import { EnemySystem } from './systems/EnemySystem.js';
+import { EnemyBulletSystem } from './systems/EnemyBulletSystem.js';
+import { ParticleSystem } from './systems/ParticleSystem.js';
+import { CollisionSystem } from './systems/Collision.js';
+import { AnalyticsSystem } from './systems/AnalyticsSystem.js';
+
+// Pomeri ovo na sam vrh, pre bilo kakvog koda klase
+
+
+let supabaseClient;
+
+// Funkcija koja proverava da li je Supabase spreman
+const initSupabase = () => {
+    if (window.supabase) {
+        const supabaseUrl = 'https://kpqqeiaqezkpubspoplg.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwcXFlaWFxZXprcHVic3BvcGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDQ3NDksImV4cCI6MjA5MjcyMDc0OX0.QCfAZim-Zo9A4ElE8b7gmCmycd5hjwHIntvwiU6iiRo';
+        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+    } else {
+        console.error("Supabase biblioteka nije učitana!");
+    }
+};
+
+// Pozovi inicijalizaciju odmah
+initSupabase();
+
+class Game {
+    constructor() {
+        // 1. Inicijalizacija Engine-a i osnovnih kontrolera
+        this.engine = new Engine('gameCanvas');
+        this.sound = new SoundSystem();
+        
+        // 2. Inicijalizacija Analitike i Inputa
+        this.analytics = new AnalyticsSystem(this);
+        this.input = new InputHandler(this);
+
+        // 3. Inicijalizacija Sistema
+        this.starfield = new StarfieldSystem(this);
+        this.background = new BackgroundSystem(this);
+        this.levels = new LevelSystem(this);
+        this.bullets = new BulletSystem(this);
+        this.enemies = new EnemySystem(this);
+        this.enemyBullets = new EnemyBulletSystem(this);
+        this.particles = new ParticleSystem(this);
+        this.collision = new CollisionSystem(this);
+
+        // 4. Glavni Akteri
+        this.player = new Player(this);
+        this.boss = new Boss(this);
+
+        // 5. Game State
+        this.score = 0;
+        this.isGameOver = false;
+        this.bossDefeated = false;
+        this.shakeIntensity = 0;
+        this.shakeDecay = 30;
+        this.fadeOpacity = 0;
+        this.isFadingIn = false;
+
+        // 6. UI Event Listeners za Restart
+        const restartBtn = document.getElementById('restart-btn');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => this.resetGame());
+        }
+
+        // 7. Povezivanje petlji
+        this.engine.onUpdate = (dt) => this.update(dt);
+        this.engine.onDraw = (ctx) => this.draw(ctx);
+
+        // 8. Start Engine-a
+        this.engine.start();
+        
+        // POVEZIVANJE INTRO DUGMETA
+        const startMissionBtn = document.getElementById('start-mission-btn');
+        if (startMissionBtn) {
+            startMissionBtn.addEventListener('click', () => {
+                document.getElementById('intro-screen').style.display = 'none';
+                this.sound.resume(); 
+                this.levels.start(); // Tek sada kreće prvi nivo (šifra)
+            });
+        }
+        const nextBtn = document.getElementById('next-to-briefing-btn');
+        const startBtn = document.getElementById('start-mission-btn');
+        const nameInput = document.getElementById('candidate-name');
+
+        const nameSection = document.getElementById('name-input-section');
+        const briefingSection = document.getElementById('briefing-section');
+
+        // 1. Prelazak sa imena na obaveštenje
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                if (nameInput.value.trim().length < 3) {
+                    alert("Molimo Vas unesite puno ime i prezime.");
+                    return;
+                }
+                // Čuvamo ime u analytics sistemu za krajnji izveštaj
+                this.analytics.candidateName = nameInput.value;
+                
+                nameSection.style.display = 'none';
+                briefingSection.style.display = 'block';
+            });
+        }
+
+        // 2. Pokretanje igre nakon briefinga
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                document.getElementById('intro-screen').style.display = 'none';
+                
+                // NOVO: Prikaži HUD elemente tek sad
+                document.getElementById('hud').style.display = 'block';
+                document.getElementById('lives-display').style.display = 'block';
+                
+                this.sound.resume(); 
+                this.levels.start();
+            });
+        }
+
+    }
+
+    shake(amount) { 
+        this.shakeIntensity = amount;
+    }
+
+    setFadeOverlay(opacity) {
+        this.fadeOpacity = opacity;
+        if (this.fadeOpacity > 1) this.fadeOpacity = 1;
+    }
+
+    startFadeIn() {
+        this.fadeOpacity = 1;
+        this.isFadingIn = true;
+    }
+
+    async sendAssessmentData(report) {
+        // Ime preuzimamo iz analitike gde smo ga sačuvali na početku
+        const candidateName = this.analytics.candidateName || "Nepoznati Kandidat";
+    
+        console.log(`%c [DB]: Arhiviranje rezultata za: ${candidateName}`, "color: #00ffff;");
+    
+        // Slanje u Supabase
+        const { data, error } = await supabaseClient
+            .from('hr_reports') // Ime tabele u Supabase
+            .insert([
+                { 
+                    candidate_name: candidateName,
+                    memory_score: report.memoryScore,
+                    memory_accuracy: report.memoryAccuracy,
+                    reaction_time: report.averageReactionTime,
+                    impulse_control: report.impulseControl,
+                    accuracy: report.accuracy,
+                    stress_resilience: report.stressResilience,
+                    stability_index: report.emotionalStabilityIndex,
+                    duration: report.gameDuration
+                }
+            ]);
+    
+        if (error) {
+            console.error("Greška pri upisu u bazu:", error.message);
+        } else {
+            console.log("%c [SUCCESS]: Izveštaj je trajno sačuvan.", "color: #00ff00; font-weight: bold;");
+        }
+    }
+
+    triggerGameOver() {
+        if (this.isGameOver) return;
+        this.isGameOver = true;
+
+        const report = this.analytics.getFinalReport();
+        this.displayHRLog(report, "TERMINATED");
+
+        const highScore = localStorage.getItem('retroShooterHighScore') || 0;
+        if (this.score > highScore) localStorage.setItem('retroShooterHighScore', this.score);
+        
+        const screen = document.getElementById('game-over-screen');
+        if (screen) {
+            const h1 = screen.querySelector('h1');
+            const p = screen.querySelector('p');
+            if (h1) h1.innerText = "GAME OVER";
+            const best = Math.max(this.score, highScore);
+            if (p) p.innerHTML = `FINAL SCORE: <span id="final-score">${this.score}</span><br>(BEST: ${best})`;
+            screen.style.display = 'flex';
+        }
+        
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.style.display = 'none';
+        this.shake(20);
+    }
+
+    triggerVictory() {
+        if (this.isGameOver) return;
+        this.isGameOver = true;
+        
+        const report = this.analytics.getFinalReport();
+        this.displayHRLog(report, "SUCCESS");
+
+        const screen = document.getElementById('game-over-screen');
+        if (screen) {
+            const h1 = screen.querySelector('h1');
+            if (h1) {
+                h1.innerText = "MISSION ACCOMPLISHED";
+                h1.style.color = "#00ff00";
+            }
+            screen.style.display = 'flex';
+        }
+    }
+
+    // NOVI STILIZOVANI ISPIS ANALITIKE
+    displayHRLog(report, status) {
+        const color = status === "SUCCESS" ? "#00ff00" : "#ff0055";
+        
+        // Pravimo stilizovan i uočljiv naslov
+        console.groupCollapsed(`%c 📊 [HR ASSESSMENT REPORT] - MISSION ${status} `, `color: #000; background: ${color}; font-weight: bold; font-size: 14px; padding: 4px;`);
+        
+        // Spajamo apsolutno sve metrike u jedan jasan objekat
+        const allMetrics = {
+            "01. Trajanje Evaluacije": report.gameDuration,
+            "02. Radna Memorija (Uspesnost)": report.memoryScore,
+            "03. Tačnost Memorije (%)": report.memoryAccuracy,
+            "04. Brzina Reakcije na Pretnju": report.averageReactionTime,
+            "05. Preciznost Pucanja": report.accuracy,
+            "06. Disciplina na Okidaču": report.triggerDiscipline,
+            "07. Nastradali Civili": report.civilianCasualties,
+            "08. Inhibicija Impulsa": report.impulseControl,
+            "09. Pretrpljena Šteta (Udarci)": report.totalDamageTaken,
+            "10. Otpornost na Stres": report.stressResilience,
+            "11. Intenzitet Kretanja (Jitter)": report.movementIntensity,
+            "12. Indeks Emocionalne Stabilnosti": report.emotionalStabilityIndex
+        };
+
+        // Ispisujemo jednu veliku, preglednu tabelu
+        console.table(allMetrics);
+        
+        console.groupEnd();
+
+        // Šaljemo podatke dalje
+        this.sendAssessmentData(report);
+    }
+
+    resetGame() {
+        this.score = 0;
+        this.isGameOver = false;
+        this.bossDefeated = false;
+        
+        const scoreEl = document.getElementById('score');
+        if (scoreEl) scoreEl.innerText = "0";
+        
+        this.analytics = new AnalyticsSystem(this);
+        this.bullets.pool.forEach(b => { b.active = false; });
+        this.enemyBullets.pool.forEach(b => { b.active = false; });
+        this.enemies.pool.forEach(e => { e.active = false; });
+        this.particles.pool.forEach(p => { p.active = false; });
+        this.background.objects = [];
+
+        this.player.x = this.engine.canvas.width / 2 - 20;
+        this.player.y = this.engine.canvas.height - 100;
+        this.player.lives = 3;
+        this.player.updateLivesUI();
+        this.player.invulnerableTimer = 0;
+        this.player.weaponLevel = 1;
+        
+        this.boss.active = false;
+        const bossHud = document.getElementById('boss-hud');
+        if (bossHud) bossHud.style.display = 'none';
+        
+        this.starfield.setWarp(false);
+        this.background.setWarp(false);
+        this.fadeOpacity = 0;
+        this.levels.start();
+
+        const screen = document.getElementById('game-over-screen');
+        if (screen) screen.style.display = 'none';
+        
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.style.display = '';
+    }
+
+    update(dt) {
+        if (this.isGameOver) return;
+        
+        if (this.isFadingIn) {
+            this.fadeOpacity -= dt * 0.8;
+            if (this.fadeOpacity <= 0) {
+                this.fadeOpacity = 0;
+                this.isFadingIn = false;
+            }
+        }
+
+        if (this.levels.state === 'IDLE') {
+            this.starfield.update(dt);
+            return; 
+        }
+
+        this.input.update();
+        this.starfield.update(dt);
+        this.background.update(dt);
+        this.levels.update(dt);
+        this.player.update(dt);
+        this.bullets.update(dt);
+        this.enemyBullets.update(dt);
+        this.particles.update(dt);
+
+        if (this.boss.active) {
+            this.boss.update(dt);
+        } else if (!this.bossDefeated) {
+            this.enemies.update(dt);
+        }
+
+        this.collision.update();
+
+        if (this.shakeIntensity > 0) {
+            this.shakeIntensity -= this.shakeDecay * dt;
+            if (this.shakeIntensity < 0) this.shakeIntensity = 0;
+        }
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, this.engine.canvas.width, this.engine.canvas.height);
+        if (this.levels.state === 'IDLE') {
+            this.starfield.draw(ctx);
+            return; // NEMOJ CRТATI letelicu, neprijatelje, HUD...
+        }
+
+        ctx.save();
+        if (this.shakeIntensity > 0) {
+            const dx = (Math.random() - 0.5) * this.shakeIntensity;
+            const dy = (Math.random() - 0.5) * this.shakeIntensity;
+            ctx.translate(dx, dy);
+        }
+
+        this.starfield.draw(ctx);
+        this.background.draw(ctx);
+        
+        if (this.boss.active) {
+            this.boss.draw(ctx);
+        } else {
+            this.enemies.draw(ctx);
+        }
+
+        this.enemyBullets.draw(ctx);
+        this.bullets.draw(ctx);
+        this.player.draw(ctx);
+        this.particles.draw(ctx);
+        ctx.restore();
+        
+        if (this.fadeOpacity > 0) {
+            ctx.save();
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.fadeOpacity})`;
+            ctx.fillRect(0, 0, this.engine.canvas.width, this.engine.canvas.height);
+            ctx.restore();
+        }
+    }
+}
+
+new Game();
+--------------------
+END OF FILE: src\Game.js
+
+START OF FILE: src\core\Engine.js
+--------------------
+export class Engine {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.lastTime = 0;
+        this.onUpdate = () => {}; // Funkcija koju ćemo definisati u Game.js
+        this.onDraw = () => {};
+
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+    }
+
+    resize() {
+    // 1. Pronađi kontejner u kome se nalazi canvas
+    const container = this.canvas.parentElement; // Ovo je #game-container
+    
+    // 2. Postavi veličinu canvasa na veličinu kontejnera
+    this.canvas.width = container.clientWidth;
+    this.canvas.height = container.clientHeight;
+    
+    // 3. Pixel art settings
+    this.ctx.imageSmoothingEnabled = false;
+}
+
+    start() {
+        requestAnimationFrame(this.loop.bind(this));
+    }
+
+    loop(currentTime) {
+        // Izračunaj koliko je milisekundi prošlo od zadnjeg frejma
+        const dt = (currentTime - this.lastTime) / 1000;
+        this.lastTime = currentTime;
+
+        // Ako je tab bio neaktivan, dt će biti ogroman, pa ga ograničavamo
+        const limitedDt = Math.min(dt, 0.1);
+
+        this.onUpdate(limitedDt);
+        this.onDraw(this.ctx);
+
+        requestAnimationFrame(this.loop.bind(this));
+    }
+}
+--------------------
+END OF FILE: src\core\Engine.js
+
+START OF FILE: src\core\Input.js
+--------------------
+export class InputHandler {
+    constructor(game) {
+        this.game = game;
+        this.keys = {};
+        this.axis = { x: 0, y: 0 };
+        this.touchAxis = { x: 0, y: 0 };
+        this.isFiring = false;
+        this.inputBuffer = "";
+        this.touchId = null;
+
+        // --- EVENT LISTENERS ---
+        window.addEventListener('keydown', e => {
+            this.keys[e.code] = true;
+            if (e.code === 'Space') this.isFiring = true;
+            
+            // 1. Provera za Radnu Memoriju (A, B, C, X)
+            this.handleMemoryInput(e.code);
+            
+            // 2. Provera za brojeve (0-9)
+            if (e.key >= '0' && e.key <= '9') {
+                this.handleNumberInput(parseInt(e.key));
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            this.keys[e.code] = false;
+            if (e.code === 'Space') this.isFiring = false;
+        });
+
+        this.setupTouchControls();
+
+        // Povezivanje virtuelne tastature za mobilne / touch uređaje
+        document.querySelectorAll('.mem-btn').forEach(btn => {
+            // Koristimo 'pointerdown' jer pokriva i mis i touch, pre nego sto element izgubi fokus
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault(); // Sprečava zumiranje na dupli tap
+                const keyCode = btn.getAttribute('data-key');
+                this.handleMemoryInput(keyCode);
+            });
+        });
+    }
+
+    handleMemoryInput(keyCode) {
+        // PROVERA: Da li je test uopšte aktivan?
+        if (!this.game.levels || !this.game.levels.isMemoryInputActive) return;
+
+        const levelSys = this.game.levels;
+        let char = "";
+
+        // Mapiranje tastera
+        if (keyCode === 'KeyA') char = "A";
+        else if (keyCode === 'KeyB') char = "B";
+        else if (keyCode === 'KeyC') char = "C";
+        else if (keyCode === 'KeyX') char = "X";
+
+        if (char !== "") {
+            this.inputBuffer += char;
+            console.log(`%c [INPUT]: Dodato ${char} | Trenutni buffer: ${this.inputBuffer}`, "color: #00ffff");
+
+            // Ažuriranje vizuelnog prikaza na ekranu
+            const display = document.getElementById('input-display');
+            if (display) {
+                // Prikazuje ukucana slova + donje crte za preostala
+                const remaining = levelSys.currentSequence.length - this.inputBuffer.length;
+                display.innerText = this.inputBuffer + "_ ".repeat(Math.max(0, remaining));
+            }
+
+            // Provera da li je sekvenca kompletirana
+            if (this.inputBuffer.length === levelSys.currentSequence.length) {
+                const isCorrect = this.inputBuffer === levelSys.currentSequence;
+                
+                // Slanje rezultata u analitiku
+                if (this.game.analytics) {
+                    this.game.analytics.recordMemoryAttempt(isCorrect);
+                }
+
+                // Feedback i zatvaranje prozora
+                setTimeout(() => {
+                    const overlay = document.getElementById('memory-input-overlay');
+                    if (overlay) overlay.style.display = 'none';
+                    
+                    this.inputBuffer = "";
+                    levelSys.isMemoryInputActive = false;
+                }, 400);
+
+                if (isCorrect) {
+                    console.log("%c [SUCCESS]: Šifra ispravna!", "color: #00ff00; font-weight: bold;");
+                    if (this.game.sound) this.game.sound.playBossHit();
+                } else {
+                    console.log("%c [FAIL]: Šifra pogrešna!", "color: #ff0000; font-weight: bold;");
+                    this.game.shake(20);
+                }
+            }
+        }
+    }
+
+    handleNumberInput(num) {
+        if (!this.game.bonuses) return;
+        const activeBonus = this.game.bonuses.pool.find(b => b.active && b.isTouched);
+        
+        if (activeBonus) {
+            const solveTime = (Date.now() - activeBonus.touchTime) / 1000;
+            if (num === activeBonus.correctAnswer) {
+                this.applyBonusEffect(activeBonus);
+                if (this.game.analytics && this.game.analytics.recordMathSuccess) {
+                    this.game.analytics.recordMathSuccess(solveTime);
+                }
+            } else {
+                this.game.shake(10);
+            }
+            activeBonus.active = false;
+            activeBonus.isTouched = false;
+        }
+    }
+
+    applyBonusEffect(bonus) {
+        if (this.game.sound) this.game.sound.playBossHit();
+        if (bonus.type === 'LIFE') {
+            this.game.player.lives++;
+            this.game.player.updateLivesUI();
+        } else if (bonus.type === 'BOMB') {
+            this.game.enemies.pool.forEach(e => e.active = false);
+            this.game.enemyBullets.pool.forEach(b => b.active = false);
+        } else if (bonus.type === 'SPREAD') {
+            this.game.player.upgradeWeapon();
+        }
+    }
+
+    update() {
+        this.axis.x = 0;
+        this.axis.y = 0;
+
+        // Kretanje tastaturom (radi nezavisno od unosa šifre)
+        if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.axis.x = -1;
+        if (this.keys['ArrowRight'] || this.keys['KeyD']) this.axis.x = 1;
+        if (this.keys['ArrowUp'] || this.keys['KeyW']) this.axis.y = -1;
+        if (this.keys['ArrowDown'] || this.keys['KeyS']) this.axis.y = 1;
+
+        if (this.touchId !== null) {
+            this.axis.x = this.touchAxis.x;
+            this.axis.y = this.touchAxis.y;
+        }
+
+        if (this.axis.x !== 0 && this.axis.y !== 0) {
+            const length = Math.sqrt(this.axis.x**2 + this.axis.y**2);
+            this.axis.x /= length;
+            this.axis.y /= length;
+        }
+    }
+
+    setupTouchControls() {
+        const zone = document.getElementById('joystick-zone');
+        const stick = document.getElementById('joystick-stick');
+        const fireBtn = document.getElementById('fire-btn');
+        if (!zone || !stick || !fireBtn) return;
+
+        zone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.touchId = e.changedTouches[0].identifier;
+            this.handleJoystickMove(e.changedTouches[0], zone, stick, 35);
+        }, { passive: false });
+
+        zone.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === this.touchId) {
+                    this.handleJoystickMove(e.changedTouches[i], zone, stick, 35);
+                }
+            }
+        }, { passive: false });
+
+        const stopTouch = (e) => {
+            e.preventDefault();
+            this.touchId = null;
+            this.touchAxis = { x: 0, y: 0 };
+            stick.style.transform = `translate(-50%, -50%)`;
+        };
+        zone.addEventListener('touchend', stopTouch);
+        
+        fireBtn.addEventListener('touchstart', (e) => { 
+            e.preventDefault(); 
+            this.isFiring = true; 
+        }, { passive: false });
+        fireBtn.addEventListener('touchend', (e) => { 
+            e.preventDefault(); 
+            this.isFiring = false; 
+        });
+    }
+    
+
+    handleJoystickMove(touch, zone, stick, maxRadius) {
+        const rect = zone.getBoundingClientRect();
+        let dx = touch.clientX - (rect.left + rect.width / 2);
+        let dy = touch.clientY - (rect.top + rect.height / 2);
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > maxRadius) { dx *= maxRadius / dist; dy *= maxRadius / dist; }
+        stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+        this.touchAxis.x = dx / maxRadius;
+        this.touchAxis.y = dy / maxRadius;
+    }
+
+    getAxis() { return this.axis; }
+    getFire() { return this.isFiring; }
+}
+--------------------
+END OF FILE: src\core\Input.js
+
+START OF FILE: src\core\Sound.js
+--------------------
+export class SoundSystem {
+    constructor() {
+        // Kreiramo Audio Context. Ovo je tvoja virtuelna zvučna kartica.
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+        
+        // Master Volume (da ne probijemo uši)
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = 0.3; // 30% jačine
+        this.masterGain.connect(this.ctx.destination);
+
+        // Buffer za šum (koristi se za eksplozije)
+        this.noiseBuffer = this.createNoiseBuffer();
+    }
+
+    // Browseri blokiraju zvuk dok korisnik ne klikne.
+    // Ovu metodu zovemo na prvi klik/touch.
+    resume() {
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    // --- GENERATOR ŠUMA (Za eksplozije) ---
+    createNoiseBuffer() {
+        const bufferSize = this.ctx.sampleRate * 2; // 2 sekunde šuma
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+        return buffer;
+    }
+
+    // --- ZVUK 1: LASER (Pew Pew) ---
+    playShoot() {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        // Postavke tona
+        osc.type = 'square'; // 'square' ili 'sawtooth' su dobri za retro
+        
+        // Frekvencija pada sa 880Hz na 100Hz (Slide efekat)
+        const now = this.ctx.currentTime;
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+
+        // Volume Envelope (ADSR - Attack, Decay, Sustain, Release)
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+        osc.start(now);
+        osc.stop(now + 0.15);
+    }
+
+    // --- ZVUK 2: EKSPLOZIJA (Boom) ---
+    playExplosion() {
+        const src = this.ctx.createBufferSource();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        src.buffer = this.noiseBuffer;
+        
+        // Lowpass filter "guši" šum da zvuči kao eksplozija, a ne kao TV sneg
+        filter.type = 'lowpass';
+        filter.frequency.value = 1000;
+
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        const now = this.ctx.currentTime;
+        
+        // Volume opada duže nego kod pucnja
+        gain.gain.setValueAtTime(1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+        // Filter frequency drop (da zvuk postane "dublji" pred kraj)
+        filter.frequency.setValueAtTime(1000, now);
+        filter.frequency.exponentialRampToValueAtTime(100, now + 0.4);
+
+        src.start(now);
+        src.stop(now + 0.5);
+    }
+
+    // --- ZVUK 3: BOSS HIT (Metalni udarac) ---
+    playBossHit() {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.type = 'triangle';
+        const now = this.ctx.currentTime;
+        
+        // Kratak, nizak ton
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.linearRampToValueAtTime(50, now + 0.1);
+
+        gain.gain.setValueAtTime(0.8, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+        osc.start(now);
+        osc.stop(now + 0.1);
+    }
+}
+--------------------
+END OF FILE: src\core\Sound.js
+
+START OF FILE: src\entities\Bonus.js
+--------------------
+import { Entity } from './Entity.js';
+
+export class Bonus extends Entity {
+    constructor() {
+        super(0, 0, 45, 45, '#fff'); // Malo veći okvir za bolju čitljivost
+        this.active = false;
+        this.speed = 150;
+        this.type = 'NONE'; 
+        this.wobble = 0;
+        this.isTouched = false;
+        this.touchTime = 0;
+        this.mathQuestion = "";
+        this.correctAnswer = 0;
+    }
+
+    spawn(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.active = true;
+        this.isTouched = false;
+        this.wobble = 0;
+        
+        // Generator brzih operacija sa rezultatom 0-9
+        const ops = ['+', '-', '*', '/'];
+        const op = ops[Math.floor(Math.random() * ops.length)];
+        let a, b, res;
+
+        switch(op) {
+            case '+':
+                res = Math.floor(Math.random() * 10); // Rezultat 0-9
+                a = Math.floor(Math.random() * (res + 1));
+                b = res - a;
+                break;
+            case '-':
+                a = Math.floor(Math.random() * 10);
+                b = Math.floor(Math.random() * (a + 1));
+                res = a - b;
+                break;
+            case '*':
+                // Parovi čiji je proizvod <= 9
+                const pairs = [[0,5], [1,9], [2,4], [3,3], [4,2], [5,1], [1,1]];
+                const pair = pairs[Math.floor(Math.random() * pairs.length)];
+                a = pair[0];
+                b = Math.floor(Math.random() * (pair[1] + 1));
+                res = a * b;
+                break;
+            case '/':
+                res = Math.floor(Math.random() * 9) + 1; // Rezultat 1-9
+                b = Math.floor(Math.random() * 3) + 1;   // Delilac 1-3
+                a = res * b;
+                break;
+        }
+
+        this.correctAnswer = res;
+        this.mathQuestion = `${a}${op}${b}`;
+        
+        // Postavljanje boja prema tipu bonusa
+        if (this.type === 'BOMB') this.color = '#ffaa00';
+        else if (this.type === 'SPREAD') this.color = '#00ffff';
+        else if (this.type === 'LIFE') this.color = '#ff0055';
+    }
+
+    update(dt, canvasHeight) {
+        if (!this.active) return;
+
+        // Ako kockica NIJE dotaknuta, ona nastavlja da pada
+        if (!this.isTouched) {
+            this.y += this.speed * dt;
+            this.wobble += dt * 5;
+            this.x += Math.sin(this.wobble) * 0.5; // Blago lelujanje levo-desno
+        } else {
+            // Ako je dotaknuta, stoji u mestu dok igrač ne unese broj
+            // Ovde možemo dodati i tajmer da bonus nestane ako se ne reši brzo
+            if (Date.now() - this.touchTime > 5000) { // 5 sekundi limit
+                this.active = false;
+                this.isTouched = false;
+            }
+        }
+
+        // Deaktivacija ako izleti sa ekrana
+        if (this.y > canvasHeight) {
+            this.active = false;
+        }
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+        ctx.save();
+        
+        // Neon efekat i senka
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+
+        // Stil za tekst zadatka
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 22px VT323';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Vizuelni feedback kada je kockica "aktivirana" dodirom
+        if (this.isTouched) {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(this.x + 2, this.y + 2, this.width - 4, this.height - 4);
+            ctx.fillStyle = '#ff0000'; // Crveni tekst za hitnost
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = '#ff0000';
+        }
+
+        ctx.fillText(this.mathQuestion, this.x + this.width / 2, this.y + this.height / 2);
+
+        ctx.restore();
+    }
+}
+--------------------
+END OF FILE: src\entities\Bonus.js
+
+START OF FILE: src\entities\Boss.js
+--------------------
+import { Entity } from './Entity.js';
+
+export class Boss extends Entity {
+    constructor(game) {
+        // Početne dimenzije (biće pregažene u spawn)
+        super(0, -200, 200, 100, '#ff0000');
+        this.game = game;
+        this.active = false;
+        
+        // --- STATE MACHINE ---
+        this.state = 'OFF'; // OFF, ENTERING, FIGHTING
+        
+        // --- STATISTIKA ---
+        this.maxHealth = 100;
+        this.health = 100;
+        this.speed = 100;     // Brzina kretanja levo-desno
+        this.shootRate = 1.0; // Koliko često puca
+        this.shootTimer = 0;
+        this.tier = 1;
+
+        // --- VIZUELNO ---
+        this.hitFlashTimer = 0; // Za blicanje kad ga pogodimo
+        this.moveDirection = 1; // 1 = Desno, -1 = Levo
+    }
+
+    spawn(tier = 4) {
+        this.active = true;
+        this.tier = tier;
+        
+        // 1. POČETNA POZICIJA (IZNAD EKRANA)
+        this.width = 200;
+        this.height = 120;
+        this.x = this.game.engine.canvas.width / 2 - this.width / 2;
+        this.y = -250; // Skroz gore van ekrana
+        
+        this.state = 'ENTERING'; // <-- BITNO: Prvo ulazi na scenu
+
+        // 2. KONFIGURACIJA PO TIER-u
+        if (tier === 1) { // Laki
+            this.maxHealth = 150;
+            this.shootRate = 1.5;
+            this.speed = 80;
+            this.color = '#0088ff';
+        } else if (tier === 2) { // Srednji
+            this.maxHealth = 300;
+            this.shootRate = 1.0;
+            this.speed = 100;
+            this.color = '#00ff00';
+        } else if (tier === 3) { // Teški
+            this.maxHealth = 500;
+            this.shootRate = 0.7;
+            this.speed = 120;
+            this.color = '#ffaa00';
+        } else { // MOTHERSHIP
+            this.maxHealth = 1000;
+            this.shootRate = 0.4;
+            this.speed = 50; // Sporo se kreće ali uništi sve
+            this.color = '#ff0000';
+            this.width = 300; // Veći
+            this.x = this.game.engine.canvas.width / 2 - this.width / 2;
+        }
+
+        this.health = this.maxHealth;
+        this.updateHealthBar();
+        this.shootTimer = 2.0; // Mala pauza pre prvog pucnja
+
+        // UI Update
+        const bossName = document.querySelector('.boss-name');
+        if (tier === 4) bossName.innerText = "⚠️ MOTHERSHIP ⚠️";
+        else bossName.innerText = `⚠️ SECTOR BOSS (CLASS ${tier}) ⚠️`;
+        
+        document.getElementById('boss-hud').style.display = 'block';
+    }
+
+    update(dt) {
+        if (!this.active) return;
+
+        // Blicanje (Visual feedback)
+        if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+
+        // --- FAZA 1: ULAZAK NA EKRAN ---
+        if (this.state === 'ENTERING') {
+            // Spuštaj se dole dok ne dođeš do Y = 50
+            this.y += 100 * dt; 
+            if (this.y >= 50) {
+                this.y = 50;
+                this.state = 'FIGHTING'; // Pređi u borbeni režim
+            }
+            return; // Dok ulazi, ne puca i ne ide levo-desno
+        }
+
+        // --- FAZA 2: BORBA ---
+        if (this.state === 'FIGHTING') {
+            const canvasWidth = this.game.engine.canvas.width;
+
+            // 1. Kretanje Levo-Desno
+            this.x += this.speed * this.moveDirection * dt;
+
+            // Provera ivica (Ping-Pong kretanje)
+            if (this.x <= 0) {
+                this.x = 0;
+                this.moveDirection = 1; // Idi desno
+            } else if (this.x + this.width >= canvasWidth) {
+                this.x = canvasWidth - this.width;
+                this.moveDirection = -1; // Idi levo
+            }
+
+            // 2. Pucanje
+            this.shootTimer -= dt;
+            if (this.shootTimer <= 0) {
+                this.fire();
+                this.shootTimer = this.shootRate;
+            }
+        }
+    }
+
+    fire() {
+        const centerX = this.x + this.width / 2;
+        const bottomY = this.y + this.height - 20;
+
+        // Različiti napadi zavisno od Tier-a
+        if (this.tier === 1) {
+            // Običan metak ka igraču
+            this.game.enemyBullets.fire(centerX, bottomY, this.game.player.x, this.game.player.y);
+        } 
+        else if (this.tier === 2 || this.tier === 3) {
+            // Dva metka (sa levog i desnog topa)
+            this.game.enemyBullets.fire(this.x + 20, bottomY, this.game.player.x, this.game.player.y);
+            this.game.enemyBullets.fire(this.x + this.width - 20, bottomY, this.game.player.x, this.game.player.y);
+        } 
+        else {
+            // MOTHERSHIP: 3 Metka (Lepeza) + Brza paljba
+            this.game.enemyBullets.fire(centerX, bottomY, this.game.player.x, this.game.player.y);
+            this.game.enemyBullets.fire(this.x + 40, bottomY, this.game.player.x - 100, this.game.player.y + 100);
+            this.game.enemyBullets.fire(this.x + this.width - 40, bottomY, this.game.player.x + 100, this.game.player.y + 100);
+        }
+        
+        // Zvuk pucnja (koristimo shoot zvuk malo dublje)
+        // Ovde bi idealno išao poseban zvuk, ali za sad je ok.
+    }
+
+    takeDamage(amount) {
+        if (this.state !== 'FIGHTING') return; // Ne možeš ga povrediti dok ulazi
+
+        this.health -= amount;
+        this.hitFlashTimer = 0.1; // Blicni belo
+        this.updateHealthBar();
+
+        if (this.health <= 0) {
+            this.die();
+        }
+    }
+
+    updateHealthBar() {
+        const fill = document.getElementById('hp-bar-fill');
+        const percent = Math.max(0, (this.health / this.maxHealth) * 100);
+        fill.style.width = percent + '%';
+    }
+
+    die() {
+        this.active = false;
+        this.game.bossDefeated = true; // Javljamo LevelSystemu
+        document.getElementById('boss-hud').style.display = 'none';
+
+        // Velika eksplozija
+        this.game.sound.playExplosion();
+        this.game.shake(30);
+        
+        // Mnogo čestica
+        for(let i=0; i<20; i++) {
+            setTimeout(() => {
+                const rx = this.x + Math.random() * this.width;
+                const ry = this.y + Math.random() * this.height;
+                this.game.particles.explode(rx, ry, '#ffaa00', 30);
+            }, i * 100);
+        }
+    }
+
+    // --- CRTANJE (Isto kao što smo napravili malopre, sa Neon stilom) ---
+    draw(ctx) {
+        if (!this.active) return;
+        
+        const centerX = this.x + this.width / 2;
+        const centerY = this.y + this.height / 2;
+
+        ctx.save();
+
+        // 1. EFEKAT POGOTKA (Beli blic)
+        if (this.hitFlashTimer > 0) {
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = '#ffffff';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.restore();
+            return; 
+        }
+
+        // 2. GLAVNI TRUP
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = this.color; // Koristimo boju Tier-a
+        ctx.fillStyle = '#110000'; // Tamna baza
+        
+        // Trup
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y); 
+        ctx.lineTo(this.x + this.width, this.y); 
+        ctx.lineTo(this.x + this.width * 0.8, this.y + this.height); 
+        ctx.lineTo(this.x + this.width * 0.2, this.y + this.height); 
+        ctx.closePath();
+        ctx.fill();
+
+        // 3. DETALJI (Linije)
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(this.x + 20, centerY);
+        ctx.lineTo(this.x + this.width - 20, centerY);
+        ctx.stroke();
+
+        // 4. JEZGRO
+        const chargeRatio = Math.max(0, this.shootTimer / 1.5); 
+        // Boja jezgra
+        ctx.shadowBlur = 30 + (1-chargeRatio) * 20; 
+        ctx.fillStyle = `rgba(255, 255, 255, ${1-chargeRatio})`; // Pulsira belo pred pucanj
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY + 10, 20, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+--------------------
+END OF FILE: src\entities\Boss.js
+
+START OF FILE: src\entities\Bullet.js
+--------------------
+import { Entity } from './Entity.js';
+
+export class Bullet extends Entity {
+    constructor() {
+        // Počinjemo sa 0,0, postavićemo pravu poziciju kad ga ispalimo
+        super(0, 0, 4, 15, '#ffff00'); // Žuta boja, tanak i dugačak
+        this.speed = 800; // Veoma brz
+        this.active = false; // Po defaultu je "mrtav" i čeka u bazenu
+    }
+
+    // Metod za aktivaciju metka (reusability)
+    spawn(x, y) {
+        this.x = x;
+        this.y = y;
+        this.active = true;
+    }
+
+    update(dt, canvasHeight) {
+        if (!this.active) return;
+
+        // Metak uvek ide gore (y se smanjuje)
+        this.y -= this.speed * dt;
+
+        // Ako izađe sa ekrana, deaktiviraj ga (vrati u bazen)
+        if (this.y + this.height < 0) {
+            this.active = false;
+        }
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+        
+        // Dodajemo intenzivan glow efekt samo za metke
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#ffaa00';
+        super.draw(ctx);
+        ctx.shadowBlur = 0;
+    }
+}
+--------------------
+END OF FILE: src\entities\Bullet.js
+
+START OF FILE: src\entities\Enemy.js
+--------------------
+import { Entity } from './Entity.js';
+
+export class Enemy extends Entity {
+    constructor(game) {
+        super(0, 0, 40, 40, '#ff0000');
+        this.game = game; 
+        this.active = false;
+        this.aiType = 'BASIC';
+        this.age = 0; 
+        this.shootTimer = 0;
+        this.startX = 0;
+        this.speed = 100;
+    }
+
+    spawn(x, y, forcedType = null) {
+        this.x = x;
+        this.startX = x;
+        this.y = y;
+        this.active = true;
+        this.age = 0;
+
+        this.aiType = forcedType;
+
+        if (this.aiType === 'BASIC') {
+            this.color = '#ff4444';
+            this.speed = 150;
+            this.width = 40; 
+            this.height = 40;
+        } 
+        else if (this.aiType === 'WAVER') {
+            this.color = '#ff00ff';
+            this.speed = 100;
+            this.width = 40; 
+            this.height = 40;
+        } 
+        else if (this.aiType === 'SHOOTER') {
+            this.color = '#ffff00';
+            this.speed = 80;
+            this.width = 45;
+            this.height = 45;
+            this.shootTimer = 1.0 + Math.random() * 1.5;
+        }
+        // NOVO: Civilni brod - predstavlja test selektivne pažnje
+        else if (this.aiType === 'CIVILIAN') {
+            this.color = '#ffffff'; 
+            this.speed = 120;
+            this.width = 30;
+            this.height = 30;
+        }
+    }
+
+    update(dt, canvasHeight) {
+        if (!this.active) return;
+        this.age += dt;
+
+        this.y += this.speed * dt;
+
+        if (this.aiType === 'WAVER') {
+            this.x = this.startX + Math.sin(this.age * 3) * 60;
+        }
+        else if (this.aiType === 'SHOOTER') {
+            this.shootTimer -= dt;
+            if (this.shootTimer <= 0) {
+                const bulletX = this.x + this.width / 2;
+                const bulletY = this.y + this.height;
+                this.game.enemyBullets.fire(bulletX, bulletY, this.game.player.x, this.game.player.y);
+                this.shootTimer = 1.5 + Math.random();
+            }
+        }
+
+        if (this.y > canvasHeight) {
+            this.active = false;
+        }
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+        const centerX = this.x + this.width / 2;
+        const centerY = this.y + this.height / 2;
+
+        ctx.save();
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 2;
+
+        if (this.aiType === 'CIVILIAN') {
+            // Vizuelno neutralan stil - krug sa krstom
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, this.width / 2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillRect(centerX - 1, centerY - 8, 2, 16);
+            ctx.fillRect(centerX - 8, centerY - 1, 16, 2);
+        } else if (this.aiType === 'BASIC') {
+            ctx.beginPath();
+            ctx.moveTo(centerX, this.y + this.height);
+            ctx.lineTo(this.x + this.width, this.y);
+            ctx.lineTo(centerX, this.y + this.height * 0.3);
+            ctx.lineTo(this.x, this.y);
+            ctx.closePath();
+            ctx.fill();
+        } else if (this.aiType === 'WAVER') {
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY, this.width * 0.3, this.height * 0.5, 0, 0, Math.PI*2);
+            ctx.fill();
+        } else if (this.aiType === 'SHOOTER') {
+            ctx.fillRect(this.x + 10, this.y, this.width - 20, this.height * 0.7);
+            ctx.fillRect(this.x + 5, this.y + this.height * 0.5, 8, this.height * 0.5);
+            ctx.fillRect(this.x + this.width - 13, this.y + this.height * 0.5, 8, this.height * 0.5);
+        }
+        
+        ctx.restore();
+    }
+}
+--------------------
+END OF FILE: src\entities\Enemy.js
+
+START OF FILE: src\entities\Entity.js
+--------------------
+// OVO JE Entity.js
+// Nema import-a na vrhu! On je temelj.
+
+export class Entity {
+    constructor(x, y, width, height, color) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.color = color;
+        this.active = true; 
+    }
+
+    update(dt) {
+        // Prazno
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+        ctx.save();
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.restore();
+    }
+
+    getCenter() {
+        return {
+            x: this.x + this.width / 2,
+            y: this.y + this.height / 2
+        };
+    }
+}
+--------------------
+END OF FILE: src\entities\Entity.js
+
+START OF FILE: src\entities\Player.js
+--------------------
+import { Entity } from './Entity.js';
+
+export class Player extends Entity {
+    constructor(game) {
+        const startX = game.engine.canvas.width / 2 - 20;
+        const startY = game.engine.canvas.height - 100;
+        super(startX, startY, 40, 40, '#00ff00');
+
+        this.game = game;
+        this.speed = 400;
+        
+        // --- ORUŽJE ---
+        this.fireTimer = 0;
+        this.fireRate = 0.15;
+        this.weaponLevel = 1;
+        this.powerUpTimer = 0;
+        
+        // --- ŽIVOTI I ODBRANA ---
+        this.lives = 3;             // 3 Života
+        this.invulnerableTimer = 0; // Tajmer besmrtnosti
+        this.isVisible = true;      // Za efekat treperenja
+        
+        this.engineFlicker = 0;
+    }
+
+    upgradeWeapon() {
+        this.weaponLevel = 2;
+        this.powerUpTimer = 10.0;
+        this.color = '#00ffff';
+    }
+
+    // Metoda za primanje štete
+    takeDamage() {
+        // Ako smo već besmrtni (upravo pogođeni), ignoriši štetu
+        if (this.invulnerableTimer > 0) return;
+
+        this.lives--;
+        
+        // Ažuriraj UI
+        this.updateLivesUI();
+
+        if (this.lives > 0) {
+            // Preživeo je, daj mu 2 sekunde besmrtnosti
+            this.invulnerableTimer = 2.0;
+            this.game.sound.playExplosion(); // Manja eksplozija
+            this.game.shake(10);
+            // Opciono: resetuj poziciju na centar? Ne moramo, bolje da nastavi.
+        } else {
+            // Mrtav skroz
+            this.game.sound.playExplosion(); // Velika eksplozija
+            this.game.triggerGameOver();
+        }
+    }
+
+    updateLivesUI() {
+        // Generiši string sa srcima
+        let hearts = '';
+        for(let i=0; i<this.lives; i++) hearts += '❤️';
+        const el = document.getElementById('lives-count');
+        if(el) el.innerText = hearts;
+    }
+
+    update(dt) {
+        // ... (Kretanje, Clamping, Pucanje ostaje isto kao pre) ...
+        const input = this.game.input.getAxis();
+        this.x += input.x * this.speed * dt;
+        this.y += input.y * this.speed * dt;
+
+        const canvas = this.game.engine.canvas;
+        if (this.x < 0) this.x = 0;
+        if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+        if (this.y < 0) this.y = 0;
+        if (this.y + this.height > canvas.height) this.y = canvas.height - this.height;
+
+        if (this.weaponLevel > 1) {
+            this.powerUpTimer -= dt;
+            if (this.powerUpTimer <= 0) {
+                this.weaponLevel = 1;
+                this.color = '#00ff00';
+            }
+        }
+
+        if (this.fireTimer > 0) this.fireTimer -= dt;
+        if (this.game.input.getFire() && this.fireTimer <= 0) {
+            const centerX = this.x + this.width / 2;
+            if (this.weaponLevel === 1) this.game.bullets.fire(centerX, this.y);
+            else this.game.bullets.fireSpread(centerX, this.y);
+            this.game.sound.playShoot();
+            this.fireTimer = this.fireRate;
+        }
+        
+        this.engineFlicker += dt * 20;
+
+        // --- UPDATE BESMRTNOSTI ---
+        if (this.invulnerableTimer > 0) {
+            this.invulnerableTimer -= dt;
+            // Treperenje: svakih 0.1s menjaj vidljivost
+            this.isVisible = Math.floor(this.invulnerableTimer * 10) % 2 === 0;
+            
+            if (this.invulnerableTimer <= 0) {
+                this.isVisible = true; // Budi siguran da je vidljiv na kraju
+            }
+        }
+        
+        if (this.game.analytics) {
+            this.game.analytics.recordMovement(this.x, this.y);
+        }
+    }
+
+    draw(ctx) {
+        // Ako smo u fazi treperenja i 'nevidljivi' smo trenutno, ne crtaj ništa
+        if (!this.isVisible) return;
+
+        // ... (Crtanje motora i broda ostaje isto kao pre) ...
+        ctx.save();
+        const flicker = Math.sin(this.engineFlicker) * 5;
+        ctx.fillStyle = '#00ffff';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#00ffff';
+        ctx.beginPath();
+        ctx.moveTo(this.x + 10, this.y + this.height);
+        ctx.lineTo(this.x + this.width - 10, this.y + this.height);
+        ctx.lineTo(this.x + this.width / 2, this.y + this.height + 15 + flicker);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
+        ctx.beginPath();
+        ctx.moveTo(this.x + this.width / 2, this.y);
+        ctx.lineTo(this.x + this.width, this.y + this.height);
+        ctx.lineTo(this.x + this.width / 2, this.y + this.height - 10);
+        ctx.lineTo(this.x, this.y + this.height);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+}
+--------------------
+END OF FILE: src\entities\Player.js
+
+START OF FILE: src\systems\AnalyticsSystem.js
+--------------------
+export class AnalyticsSystem {
+    constructor(game) {
+        this.game = game;
+        this.metrics = {
+            startTime: Date.now(),
+            shotsFired: 0,
+            hitsConfirmed: 0,
+            reactionTimes: [], 
+            lastEnemySpawnTime: 0,
+            damageEvents: [],
+            // Radna memorija
+            memoryAttempts: [], 
+            // Selektivna pažnja (Inhibicija impulsa)
+            civilianHits: 0,
+            // Neurometrija
+            totalDistanceTraveled: 0, // Ukupan put letelice
+            overActivityScore: 0,     // Kretanje bez promene cilja (nervozno šetanje levo-desno)
+            lastPosition: { x: 0, y: 0 }
+        };
+    }
+
+    recordShot() {
+        this.metrics.shotsFired++;
+    }
+
+    recordHit() {
+        this.metrics.hitsConfirmed++;
+        if (this.metrics.lastEnemySpawnTime > 0) {
+            const reaction = Date.now() - this.metrics.lastEnemySpawnTime;
+            this.metrics.reactionTimes.push(reaction);
+            this.metrics.lastEnemySpawnTime = 0; 
+        }
+    }
+
+    recordEnemySpawn() {
+        this.metrics.lastEnemySpawnTime = Date.now();
+    }
+
+    recordDamage() {
+        this.metrics.damageEvents.push(Date.now());
+    }
+
+    // Beleženje pokušaja unosa šifre (Radna memorija)
+    recordMemoryAttempt(isCorrect) {
+        this.metrics.memoryAttempts.push({
+            correct: isCorrect,
+            timestamp: Date.now()
+        });
+    }
+
+    // NOVO: Beleženje pogođenih civila (Selektivna pažnja)
+    recordCivilianHit() {
+        this.metrics.civilianHits++;
+    }
+
+    recordMovement(currentX, currentY) {
+        if (this.metrics.lastPosition) {
+            const dx = Math.abs(currentX - this.metrics.lastPosition.x);
+            const dy = Math.abs(currentY - this.metrics.lastPosition.y);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            this.metrics.totalDistanceTraveled += dist;
+
+            // Ako se igrač pomera prebrzo i često menja smer (jitter), povećavamo score "neuroticizma"
+            if (dist > 5) { // Brzi, nagli pokreti
+                this.metrics.overActivityScore += 0.01;
+            }
+        }
+        this.metrics.lastPosition = { x: currentX, y: currentY };
+    }
+
+    getFinalReport() {
+        const duration = (Date.now() - this.metrics.startTime) / 1000;
+        
+        // Obračun preciznosti
+        const accuracy = this.metrics.shotsFired > 0 
+            ? (this.metrics.hitsConfirmed / this.metrics.shotsFired) * 100 
+            : 0;
+        
+        // Obračun prosečne reakcije
+        const avgReaction = this.metrics.reactionTimes.length > 0
+            ? this.metrics.reactionTimes.reduce((a, b) => a + b) / this.metrics.reactionTimes.length
+            : 0;
+
+        // Obračun radne memorije
+        const memorySuccess = this.metrics.memoryAttempts.filter(a => a.correct).length;
+        const totalMemoryAttempts = this.metrics.memoryAttempts.length;
+        const activityDensity = this.metrics.totalDistanceTraveled / duration;
+
+        // Logika za selektivnu pažnju (Inhibicija impulsa)
+        let impulseControl = "EXCELLENT";
+        if (this.metrics.civilianHits > 0) {
+            impulseControl = "POOR (Civilian Casualties)";
+        }
+
+        return {
+            gameDuration: duration.toFixed(2) + "s",
+            accuracy: accuracy.toFixed(2) + "%",
+            averageReactionTime: avgReaction.toFixed(0) + "ms",
+            totalDamageTaken: this.metrics.damageEvents.length,
+            // HR Metrika za selektivnu pažnju
+            civilianCasualties: this.metrics.civilianHits,
+            impulseControl: impulseControl,
+            // Neurometrija
+            movementIntensity: activityDensity.toFixed(0),
+            triggerDiscipline: accuracy > 60 ? "HIGH" : (accuracy > 30 ? "MODERATE" : "LOW (Panic)"),
+            stressResilience: this.metrics.damageEvents.length < 3 ? "STABLE" : "FRAGILE",
+            emotionalStabilityIndex: (accuracy / (activityDensity + 1)).toFixed(2),
+            // HR Metrika za radnu memoriju
+            memoryScore: `${memorySuccess}/${totalMemoryAttempts} sequences correct`,
+            memoryAccuracy: totalMemoryAttempts > 0 
+                ? ((memorySuccess / totalMemoryAttempts) * 100).toFixed(2) + "%" 
+                : "N/A"
+        };
+    }
+}
+--------------------
+END OF FILE: src\systems\AnalyticsSystem.js
+
+START OF FILE: src\systems\BackgroundSystem.js
+--------------------
+class BgObject {
+    constructor(x, y, size, type, color) {
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.type = type; // 'PLANET', 'COMET', 'ASTEROID'
+        this.color = color;
+        this.active = true;
+
+        if (this.type === 'PLANET') {
+            this.speedX = 0;
+            this.speedY = Math.random() * 10 + 5; 
+        } else if (this.type === 'ASTEROID') {
+            // Asteroidi su brži od planeta, sporiji od kometa
+            this.speedY = Math.random() * 50 + 50; 
+            this.speedX = (Math.random() - 0.5) * 20;
+            this.rotation = Math.random() * Math.PI;
+            this.rotSpeed = (Math.random() - 0.5) * 2;
+        } else {
+            // Komete
+            this.speedY = Math.random() * 100 + 150; 
+            this.speedX = (Math.random() - 0.5) * 100; 
+            this.angle = Math.atan2(this.speedY, this.speedX);
+        }
+    }
+
+    update(dt, canvasHeight) {
+        this.x += this.speedX * dt;
+        this.y += this.speedY * dt;
+        if (this.type === 'ASTEROID') this.rotation += this.rotSpeed * dt;
+
+        if (this.y - this.size * 4 > canvasHeight || this.x < -200 || this.x > 800) {
+            this.active = false;
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        if (this.type === 'PLANET') this.drawPlanet(ctx);
+        else if (this.type === 'ASTEROID') this.drawAsteroid(ctx);
+        else this.drawComet(ctx);
+        ctx.restore();
+    }
+
+    drawAsteroid(ctx) {
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        
+        ctx.fillStyle = '#555555'; // Siva boja
+        ctx.shadowBlur = 0; // Kamen ne sija
+        
+        // Crtamo nepravilan oblik (kamen)
+        ctx.beginPath();
+        const r = this.size;
+        ctx.moveTo(r, 0);
+        ctx.lineTo(r * 0.5, r * 0.8);
+        ctx.lineTo(-r * 0.6, r * 0.6);
+        ctx.lineTo(-r, -r * 0.2);
+        ctx.lineTo(-r * 0.4, -r * 0.9);
+        ctx.lineTo(r * 0.6, -r * 0.6);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Detalj (krater)
+        ctx.fillStyle = '#333333';
+        ctx.beginPath();
+        ctx.arc(r*0.3, r*0.2, r*0.3, 0, Math.PI*2);
+        ctx.fill();
+    }
+    
+    drawPlanet(ctx) {
+        const gradient = ctx.createRadialGradient(
+            this.x - this.size/3, this.y - this.size/3, this.size/10,
+            this.x, this.y, this.size
+        );
+        gradient.addColorStop(0, '#ffffff'); 
+        gradient.addColorStop(0.5, this.color); 
+        gradient.addColorStop(1, '#000005');
+
+        ctx.fillStyle = gradient;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawComet(ctx) {
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle - Math.PI / 2); 
+        const tailGrad = ctx.createLinearGradient(0, 0, 0, -this.size * 3);
+        tailGrad.addColorStop(0, this.color); 
+        tailGrad.addColorStop(1, 'transparent'); 
+        ctx.fillStyle = tailGrad;
+        ctx.beginPath();
+        ctx.moveTo(-this.size / 2, 0); 
+        ctx.lineTo(0, -this.size * 4); 
+        ctx.lineTo(this.size / 2, 0);  
+        ctx.fill();
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = '#ffffff'; 
+        ctx.beginPath();
+        ctx.arc(0, 0, this.size/2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+export class BackgroundSystem {
+    constructor(game) {
+        this.game = game;
+        this.objects = [];
+        this.spawnTimer = 5;
+        this.currentLevelId = 1; // Pratimo nivo
+        this.isWarping = false;  // Ako je warp, ne spawnujemo ništa
+    }
+
+    setLevel(id) {
+        this.currentLevelId = id;
+    }
+
+    setWarp(active) {
+        this.isWarping = active;
+        if (active) {
+            // Opciono: Ubrzaj postojeće objekte da "odlete"
+            this.objects.forEach(o => o.speedY *= 5);
+        }
+    }
+
+    update(dt) {
+        this.spawnTimer -= dt;
+        
+        // SPAWN LOGIKA (Samo ako nije warp)
+        if (this.spawnTimer <= 0 && !this.isWarping) {
+            this.spawn();
+            this.spawnTimer = Math.random() * 15 + 10; 
+        }
+
+        this.objects.forEach(obj => obj.update(dt, this.game.engine.canvas.height));
+        this.objects = this.objects.filter(obj => obj.active);
+    }
+
+    spawn() {
+        const w = this.game.engine.canvas.width;
+        
+        // --- LOGIKA PO NIVOIMA ---
+        if (this.currentLevelId === 2) {
+            // === NIVO 2: ASTEROID BELT ===
+            const size = Math.random() * 20 + 10; // Smanjen i asteroid (pre bilo 30+20)
+            const x = Math.random() * w;
+            this.objects.push(new BgObject(x, -50, size, 'ASTEROID', '#444'));
+        } 
+        else {
+            // === OSTALI NIVOI ===
+            const rand = Math.random();
+    
+            // Smanjena šansa za planetu sa 0.3 na 0.1 (samo 10% šanse)
+            if (rand < 0.1) {
+                // PLANETA - Smanjena maksimalna veličina sa 80+40 na 40+20
+                const size = Math.random() * 40 + 20; 
+                const x = Math.random() * w;
+                
+                let color = '#ff4400';
+                if (this.currentLevelId === 3) color = '#0088ff';
+                else if (this.currentLevelId === 1) color = '#cc00cc';
+                
+                this.objects.push(new BgObject(x, -size*2, size, 'PLANET', color));
+            } else {
+                // KOMETA (Sada se pojavljuje u 90% slučajeva umesto krupnih tela)
+                const size = Math.random() * 8 + 3; // Još sitnije komete
+                const x = Math.random() * w;
+                this.objects.push(new BgObject(x, -50, size, 'COMET', '#00ffff'));
+            }
+        }
+    }
+
+    draw(ctx) {
+        this.objects.forEach(obj => obj.draw(ctx));
+    }
+}
+--------------------
+END OF FILE: src\systems\BackgroundSystem.js
+
+START OF FILE: src\systems\BonusSystem.js
+--------------------
+import { Bonus } from '../entities/Bonus.js';
+
+export class BonusSystem {
+    constructor(game) {
+        this.game = game;
+        this.pool = [];
+        this.poolSize = 5; 
+
+        // Inicijalizacija bazena objekata
+        for (let i = 0; i < this.poolSize; i++) {
+            this.pool.push(new Bonus());
+        }
+
+        // Prvi bonus nakon 5 sekundi
+        this.spawnTimer = 5; 
+    }
+
+    spawn() {
+        // Pronalaženje neaktivnog bonusa
+        const bonus = this.pool.find(b => !b.active);
+        
+        if (bonus) {
+            const canvasWidth = this.game.engine.canvas.width;
+            const x = Math.random() * (canvasWidth - 80) + 40; // Malo veći padding
+            const y = -60; 
+
+            // Određivanje tipa bonusa na osnovu verovatnoće
+            const rand = Math.random();
+            let type = 'SPREAD';
+
+            if (rand < 0.20) {
+                type = 'LIFE';   // Crveni - HP
+            } else if (rand < 0.50) {
+                type = 'BOMB';   // Žuti - Clear screen
+            } else {
+                type = 'SPREAD'; // Plavi - Weapon Upgrade
+            }
+            
+            // Aktiviranje bonusa (unutar Bonus.js se generiše math zadatak)
+            bonus.spawn(x, y, type);
+            
+            // Logovanje za HR analitiku (opciono)
+            console.log(`%c [MATH CHALLENGE]: Kockica ${type} stvorena!`, "color: #ffaa00; font-weight: bold;");
+        }
+    }
+
+    // Metoda za čišćenje ekrana (poziva se pri promeni nivoa ili Game Over-u)
+    clearAll() {
+        this.pool.forEach(bonus => {
+            bonus.active = false;
+            bonus.isTouched = false;
+        });
+    }
+
+    update(dt) {
+        // Dinamički spawn rate na osnovu nivoa
+        // Što je veći nivo, bonusi mogu biti za nijansu učestaliji
+        const levelMultiplier = this.game.levels ? this.game.levels.currentLevelIndex * 0.5 : 0;
+        
+        this.spawnTimer -= dt;
+        
+        if (this.spawnTimer <= 0) {
+            this.spawn();
+            // Reset tajmera na 10-18 sekundi (smanjuje se sa nivoima)
+            this.spawnTimer = Math.max(8, (12 + Math.random() * 8) - levelMultiplier);
+        }
+
+        // Update samo aktivnih kockica
+        this.pool.forEach(bonus => {
+            if (bonus.active) {
+                bonus.update(dt, this.game.engine.canvas.height);
+            }
+        });
+    }
+
+    draw(ctx) {
+        this.pool.forEach(bonus => {
+            if (bonus.active) {
+                bonus.draw(ctx);
+            }
+        });
+    }
+}
+--------------------
+END OF FILE: src\systems\BonusSystem.js
+
+START OF FILE: src\systems\BulletSystem.js
+--------------------
+import { Bullet } from '../entities/Bullet.js';
+
+export class BulletSystem {
+    constructor(game) {
+        this.game = game;
+        this.pool = [];
+        this.poolSize = 50; 
+
+        // Inicijalizacija bazena (Object Pooling)
+        for (let i = 0; i < this.poolSize; i++) {
+            this.pool.push(new Bullet());
+        }
+    }
+
+    // Pronađi prvi slobodan metak i ispali ga
+    fire(x, y) {
+        const bullet = this.pool.find(b => !b.active);
+        if (bullet) {
+            bullet.spawn(x - bullet.width / 2, y);
+            
+            // ANALITIKA: Beležimo pucanj za HR metriku
+            this.game.analytics.recordShot();
+        }
+    }
+
+    // Multi-shot (3 metka)
+    fireSpread(x, y) {
+        let count = 0;
+        const angles = [-0.2, 0, 0.2];
+        
+        this.pool.forEach(b => {
+            if (!b.active && count < 3) {
+                const offset = angles[count] * 100;
+                b.spawn((x - b.width/2) + offset, y);
+                
+                // ANALITIKA: Svaki metak iz spread-a se računa u preciznost
+                this.game.analytics.recordShot();
+                count++;
+            }
+        });
+    }
+
+    update(dt) {
+        this.pool.forEach(bullet => {
+            bullet.update(dt, this.game.engine.canvas.height);
+        });
+    }
+
+    draw(ctx) {
+        this.pool.forEach(bullet => {
+            bullet.draw(ctx);
+        });
+    }
+}
+--------------------
+END OF FILE: src\systems\BulletSystem.js
+
+START OF FILE: src\systems\Collision.js
+--------------------
+export class CollisionSystem {
+    constructor(game) {
+        this.game = game;
+    }
+
+    // Univerzalna metoda za proveru sudara pravougaonika
+    checkRectCollision(rect1, rect2) {
+        if (!rect1 || !rect2) return false;
+        return (
+            rect1.x < rect2.x + rect2.width &&
+            rect1.x + rect1.width > rect2.x &&
+            rect1.y < rect2.y + rect2.height &&
+            rect1.y + rect1.height > rect2.y
+        );
+    }
+
+    update() {
+        const bullets = this.game.bullets?.pool || [];
+        const enemies = this.game.enemies?.pool || [];
+        const player = this.game.player;
+        const boss = this.game.boss;
+        const enemyBullets = this.game.enemyBullets?.pool || [];
+        const bonuses = this.game.bonuses?.pool || [];
+
+        if (!player || player.lives <= 0) return;
+
+        // --- 1. NAŠI METCI (Uništavanje neprijatelja i IFF test) ---
+        bullets.forEach(bullet => {
+            if (!bullet.active) return;
+
+            enemies.forEach(enemy => {
+                if (enemy.active && this.checkRectCollision(bullet, enemy)) {
+                    bullet.active = false;
+                    
+                    if (enemy.aiType === 'CIVILIAN') {
+                        // KAZNA ZA CIVILA (Selektivna pažnja)
+                        enemy.active = false;
+                        this.game.score = Math.max(0, this.game.score - 500); 
+                        this.game.shake(25);
+                        
+                        // Sigurno beleženje u analitiku
+                        this.game.analytics.recordCivilianHit();
+                        
+                        this.game.sound.playExplosion?.();
+                        this.game.particles.explode(enemy.x, enemy.y, '#ffffff', 30);
+                    } else {
+                        // Regularni neprijatelj
+                        enemy.active = false;
+                        this.game.analytics.recordHit();
+                        this.game.sound.playExplosion?.();
+                        this.game.particles.explode(enemy.x, enemy.y, enemy.color, 15);
+                        this.game.score += 100;
+                    }
+                    
+                    const scoreEl = document.getElementById('score');
+                    if (scoreEl) scoreEl.innerText = this.game.score;
+                }
+            });
+
+            // Sudar metka sa Bosom
+            if (boss && boss.active && this.checkRectCollision(bullet, boss)) {
+                bullet.active = false;
+                boss.takeDamage(2);
+                this.game.analytics.recordHit();
+                this.game.sound.playBossHit?.();
+                this.game.particles.explode(bullet.x, bullet.y, '#ffaa00', 5);
+            }
+        });
+
+        // --- 2. NEPRIJATELJSKA VATRA I SUDARI SA LETELICOM ---
+        enemyBullets.forEach(b => {
+             if (b.active && this.checkRectCollision(b, player)) {
+                 b.active = false;
+                 this.game.analytics.recordDamage();
+                 player.takeDamage();
+                 this.game.particles.explode(player.x, player.y, '#ff0000', 20);
+             }
+        });
+
+        enemies.forEach(enemy => {
+            if (enemy.active && this.checkRectCollision(player, enemy)) {
+                enemy.active = false;
+                this.game.analytics.recordDamage();
+                player.takeDamage();
+                this.game.particles.explode(player.x, player.y, '#ff0000', 30);
+            }
+        });
+
+        // --- 3. NUMERIČKA OBRADA (Igrač skuplja Bonus kockicu) ---
+        bonuses.forEach(bonus => {
+            if (bonus.active && this.checkRectCollision(player, bonus)) {
+                // Kada igrač dodirne kockicu, ona se "zaključava" za unos
+                if (!bonus.isTouched) {
+                    bonus.isTouched = true;
+                    bonus.touchTime = Date.now();
+                    
+                    // Vizuelni feedback u konzoli i igri
+                    console.log(`%c [MATH TASK]: ${bonus.mathQuestion} = ?`, "color: #ffff00; font-weight: bold; font-size: 14px;");
+                    
+                    // Opciono: Možeš dodati zvuk koji signalizira početak zadatka
+                    this.game.sound.playPowerUp?.(); 
+                }
+            }
+        });
+
+        // Sudar sa telom bosa (Instant smrt / kraj)
+        if (boss && boss.active && this.checkRectCollision(boss, player)) {
+             player.lives = 0;
+             player.updateLivesUI();
+             this.game.triggerGameOver();
+        }
+    }
+}
+--------------------
+END OF FILE: src\systems\Collision.js
+
+START OF FILE: src\systems\EnemyBulletSystem.js
+--------------------
+import { Entity } from '../entities/Entity.js';
+
+class EnemyBullet extends Entity {
+    constructor() {
+        super(0, 0, 8, 8, '#ff5555'); // Crveni/Roze metak
+        this.active = false;
+        this.speed = 250;
+        this.vx = 0; // Velocity X
+        this.vy = 0; // Velocity Y
+    }
+
+    spawn(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.active = true;
+    }
+
+    update(dt, h) {
+        if (!this.active) return;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        if (this.y > h || this.x < 0 || this.x > window.innerWidth) {
+            this.active = false;
+        }
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = '#ff0055';
+        ctx.fillStyle = this.color;
+        // Crtamo kružni metak za bosa
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 4, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+}
+
+export class EnemyBulletSystem {
+    constructor(game) {
+        this.game = game;
+        this.pool = [];
+        // Bazen od 100 metaka za bosa (trebaće mu za "Bullet Hell")
+        for(let i=0; i<100; i++) this.pool.push(new EnemyBullet());
+    }
+
+    fire(x, y, targetX, targetY) {
+        const bullet = this.pool.find(b => !b.active);
+        if (bullet) {
+            // Matematika za pucanje ka igraču (vektori)
+            const angle = Math.atan2(targetY - y, targetX - x);
+            const speed = 250;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+            
+            bullet.spawn(x, y, vx, vy);
+        }
+    }
+
+    // Pattern: Pucanje u krug (za bosa)
+    fireRadial(x, y) {
+        for (let i = 0; i < 8; i++) {
+            const bullet = this.pool.find(b => !b.active);
+            if (bullet) {
+                const angle = (Math.PI * 2 / 8) * i;
+                const speed = 200;
+                bullet.spawn(x, y, Math.cos(angle)*speed, Math.sin(angle)*speed);
+            }
+        }
+    }
+
+    update(dt) {
+        this.pool.forEach(b => b.update(dt, this.game.engine.canvas.height));
+    }
+
+    draw(ctx) {
+        this.pool.forEach(b => b.draw(ctx));
+    }
+}
+--------------------
+END OF FILE: src\systems\EnemyBulletSystem.js
+
+START OF FILE: src\systems\EnemySystem.js
+--------------------
+import { Enemy } from '../entities/Enemy.js';
+
+export class EnemySystem {
+    constructor(game) {
+        this.game = game;
+        this.pool = [];
+        this.poolSize = 30;
+        for (let i = 0; i < this.poolSize; i++) {
+            this.pool.push(new Enemy(this.game));
+        }
+        this.spawnTimer = 0;
+    }
+
+    spawn(allowedTypes) {
+        const enemy = this.pool.find(e => !e.active);
+        if (enemy) {
+            const width = this.game.engine.canvas.width;
+            const x = Math.random() * (width - 40);
+            
+            // Šansa od 15% da se pojavi civil umesto neprijatelja
+            let type;
+            if (Math.random() < 0.15) {
+                type = 'CIVILIAN';
+            } else {
+                type = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
+            }
+            
+            enemy.spawn(x, -40, type);
+            
+            // Beležimo spawn za reakciju samo ako je neprijatelj, ne civil
+            if (type !== 'CIVILIAN') {
+                this.game.analytics.recordEnemySpawn();
+            }
+        }
+    }
+
+    update(dt) {
+        const config = this.game.levels.getCurrentConfig();
+        if (!config) {
+            this.pool.forEach(enemy => enemy.update(dt, this.game.engine.canvas.height));
+            return;
+        }
+
+        this.spawnTimer -= dt;
+        if (this.spawnTimer <= 0) {
+            this.spawn(config.enemyTypes);
+            this.spawnTimer = config.spawnRate;
+        }
+
+        this.pool.forEach(enemy => enemy.update(dt, this.game.engine.canvas.height));
+    }
+
+    draw(ctx) {
+        this.pool.forEach(enemy => enemy.draw(ctx));
+    }
+}
+--------------------
+END OF FILE: src\systems\EnemySystem.js
+
+START OF FILE: src\systems\LevelSystem.js
+--------------------
+export class LevelSystem {
+    constructor(game) {
+        this.game = game;
+        this.levels = [
+            { id: 1, title: "SECTOR 1", duration: 25, spawnRate: 1.5, enemyTypes: ['BASIC'], bossTier: 1, bgColor: '#ffffff', bgSpeed: 1.0 },
+            { id: 2, title: "SECTOR 2", duration: 35, spawnRate: 1.1, enemyTypes: ['BASIC', 'WAVER'], bossTier: 2, bgColor: '#aaaaaa', bgSpeed: 3.0 },
+            { id: 3, title: "SECTOR 3", duration: 45, spawnRate: 0.8, enemyTypes: ['BASIC', 'WAVER', 'SHOOTER'], bossTier: 3, bgColor: '#88ccff', bgSpeed: 1.5 },
+            { id: 4, title: "FINAL SECTOR", duration: 10, spawnRate: 0.5, enemyTypes: ['SHOOTER'], bossTier: 4, bgColor: '#ff5555', bgSpeed: 0.5 }
+        ];
+
+        this.currentLevelIndex = 0;
+        this.levelTimer = 0;
+        this.state = 'IDLE';
+        this.announceTimer = 0;
+        this.warpTimer = 0;
+
+        // --- Radna memorija (HR Test) ---
+        this.currentSequence = ""; 
+        this.isMemoryInputActive = false;
+        this.promptTriggered = false;
+    }
+
+    // Ovu metodu zoveš u Game.js:84
+    start() {
+        this.startLevel(0);
+    }
+
+    generateSequence(length) {
+        const chars = "ABCX";
+        let res = "";
+        for (let i = 0; i < length; i++) {
+            res += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return res;
+    }
+
+    startLevel(index) {
+        this.currentLevelIndex = index;
+        const level = this.levels[index];
+        
+        // Generišemo šifru na osnovu težine nivoa
+        this.currentSequence = this.generateSequence(3 + index);
+        this.isMemoryInputActive = false;
+        this.promptTriggered = false;
+
+        // Postavljanje atmosfere
+        if (this.game.starfield) {
+            this.game.starfield.setAtmosphere(level.bgColor, level.bgSpeed);
+        }
+        if (this.game.background) {
+            this.game.background.setLevel(level.id);
+        }
+
+        // Prikazivanje VELIKE šifre pre nivoa
+        const previewScreen = document.getElementById('memory-preview-screen');
+        const bigSeqDisplay = document.getElementById('big-memory-sequence');
+        
+        if (previewScreen && bigSeqDisplay) {
+            // Razmičemo slova za bolju čitljivost (npr. "A B X")
+            bigSeqDisplay.innerText = this.currentSequence.split('').join(' ');
+            previewScreen.style.display = 'flex';
+        }
+
+        // Sakrijemo regularan level ekran ako je slučajno ostao vidljiv
+        const screen = document.getElementById('level-screen');
+        if (screen) screen.style.display = 'none';
+        
+        // Postavljamo stanje na PREVIEW (gledanje šifre)
+        this.state = 'MEMORY_PREVIEW';
+        this.announceTimer = 3.0; // Prikaz traje tačno 3 sekunde
+        this.levelTimer = 0;
+    }
+
+    update(dt) {
+        const currentLevel = this.levels[this.currentLevelIndex];
+
+        // NOVO STANJE: Gledanje velike šifre (3 sekunde)
+        if (this.state === 'MEMORY_PREVIEW') {
+            this.announceTimer -= dt;
+            if (this.announceTimer <= 0) {
+                // Sklanjamo veliki prikaz
+                const previewScreen = document.getElementById('memory-preview-screen');
+                if (previewScreen) previewScreen.style.display = 'none';
+                
+                // Prelazimo na najavu nivoa
+                const screen = document.getElementById('level-screen');
+                const title = document.getElementById('level-title');
+                const subtitle = document.getElementById('level-subtitle');
+                
+                if (screen && title && subtitle) {
+                    title.innerText = currentLevel.title;
+                    subtitle.innerText = "GET READY"; // Bez šifre, samo priprema za borbu
+                    screen.style.display = 'flex';
+                }
+                
+                this.state = 'ANNOUNCEMENT';
+                this.announceTimer = 2.0; // Najava sektora traje još 2 sekunde
+            }
+            return;
+        }
+
+        // STANJE: Najava Sektora
+        if (this.state === 'ANNOUNCEMENT') {
+            this.announceTimer -= dt;
+            if (this.announceTimer <= 0) {
+                const screen = document.getElementById('level-screen');
+                if (screen) screen.style.display = 'none';
+                this.state = 'PLAYING';
+            }
+            return;
+        }
+
+        // STANJE: Igra
+        if (this.state === 'PLAYING') {
+            this.levelTimer += dt;
+
+            // --- AKTIVACIJA GRAFIČKOG INPUTA NA 50% NIVOA ---
+            if (this.levelTimer >= currentLevel.duration / 2 && !this.promptTriggered) {
+                this.isMemoryInputActive = true;
+                this.promptTriggered = true;
+                
+                const overlay = document.getElementById('memory-input-overlay');
+                const display = document.getElementById('input-display');
+                
+                if (overlay && display) {
+                    overlay.style.display = 'block';
+                    display.innerText = "_ ".repeat(this.currentSequence.length);
+                }
+                
+                this.game.shake(15);
+                console.log("%c [HR TEST]: LOCK SYSTEM ACTIVE!", "color: #ff00ff; font-weight: bold;");
+            }
+
+            if (this.levelTimer >= currentLevel.duration) {
+                this.state = 'BOSS_FIGHT';
+                this.game.enemies.pool.forEach(e => { e.active = false; });
+                this.game.boss.spawn(currentLevel.bossTier);
+                
+                // Sigurnosno gašenje overlay-a ako igrač nije stigao da unese šifru
+                const overlay = document.getElementById('memory-input-overlay');
+                if (overlay) overlay.style.display = 'none';
+            }
+        }
+
+        // STANJE: Boss
+        if (this.state === 'BOSS_FIGHT') {
+            if (!this.game.boss.active && this.game.bossDefeated) {
+                this.game.bossDefeated = false;
+                this.triggerWarpSequence();
+            }
+        }
+
+        // STANJE: Warp (prelazak na sledeći nivo)
+        if (this.state === 'WARPING') {
+            this.warpTimer -= dt;
+            if (this.warpTimer <= 1.0) {
+                this.game.setFadeOverlay(1.0 - this.warpTimer);
+            }
+            if (this.warpTimer <= 0) {
+                this.state = 'IDLE';
+                this.game.starfield.setWarp(false);
+                this.game.background.setWarp(false);
+                this.nextLevel();
+                this.game.startFadeIn();
+            }
+        }
+    }
+
+    triggerWarpSequence() {
+        if (this.currentLevelIndex >= this.levels.length - 1) {
+            this.game.triggerVictory();
+            return;
+        }
+        this.state = 'WARPING';
+        this.warpTimer = 3.0;
+        this.game.starfield.setWarp(true);
+        this.game.background.setWarp(true);
+    }
+
+    nextLevel() {
+        if (this.currentLevelIndex < this.levels.length - 1) {
+            this.startLevel(this.currentLevelIndex + 1);
+        } else {
+            this.game.triggerVictory();
+        }
+    }
+
+    getCurrentConfig() {
+        if (this.state !== 'PLAYING') return null;
+        return this.levels[this.currentLevelIndex];
+    }
+}
+--------------------
+END OF FILE: src\systems\LevelSystem.js
+
+START OF FILE: src\systems\Particle.js
+--------------------
+
+--------------------
+END OF FILE: src\systems\Particle.js
+
+START OF FILE: src\systems\ParticleSystem.js
+--------------------
+class Particle {
+    constructor() {
+        this.x = 0;
+        this.y = 0;
+        this.vx = 0; // Brzina po X
+        this.vy = 0; // Brzina po Y
+        this.life = 0; // Koliko dugo živi (od 1.0 do 0.0)
+        this.decay = 0; // Koliko brzo umire
+        this.size = 0;
+        this.color = '#fff';
+        this.active = false;
+    }
+
+    spawn(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.active = true;
+        this.life = 1.0;
+        
+        // Random veličina
+        this.size = Math.random() * 3 + 2; 
+        
+        // Random brzina u svim pravcima (eksplozija)
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 150 + 50; // Između 50 i 200 px/s
+        
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        
+        // Random brzina nestajanja
+        this.decay = Math.random() * 1.5 + 0.5;
+    }
+
+    update(dt) {
+        if (!this.active) return;
+
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.life -= this.decay * dt;
+
+        // Ako je život istekao, ugasi česticu
+        if (this.life <= 0) {
+            this.active = false;
+        }
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+        
+        ctx.save();
+        ctx.globalAlpha = this.life; // Transparentnost zavisi od života
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+        ctx.restore();
+    }
+}
+
+export class ParticleSystem {
+    constructor(game) {
+        this.pool = [];
+        this.poolSize = 200; // 200 čestica u bazenu
+
+        for (let i = 0; i < this.poolSize; i++) {
+            this.pool.push(new Particle());
+        }
+    }
+
+    // Glavna metoda: EKSPLOZIJA!
+    explode(x, y, color, count = 10) {
+        let spawned = 0;
+        for (let particle of this.pool) {
+            if (!particle.active) {
+                particle.spawn(x, y, color);
+                spawned++;
+                if (spawned >= count) break;
+            }
+        }
+    }
+
+    update(dt) {
+        this.pool.forEach(p => p.update(dt));
+    }
+
+    draw(ctx) {
+        this.pool.forEach(p => p.draw(ctx));
+    }
+}
+--------------------
+END OF FILE: src\systems\ParticleSystem.js
+
+START OF FILE: src\systems\Starfield.js
+--------------------
+class Star {
+    constructor(screenWidth, screenHeight) {
+        this.screenWidth = screenWidth;
+        this.screenHeight = screenHeight;
+        this.reset(true); // true = nasumična pozicija pri startu igre
+    }
+
+    reset(randomY = false) {
+        this.x = Math.random() * this.screenWidth;
+        
+        // Ako je randomY true, stavi je bilo gde na ekranu (inicijalno punjenje).
+        // Ako je false, stavi je iznad ekrana (respawn).
+        this.y = randomY ? Math.random() * this.screenHeight : -10;
+
+        // --- PARALLAX LOGIKA ---
+        // Definišemo "sloj" dubine (1, 2 ili 3)
+        // 1 = Daleko, 3 = Blizu
+        const layer = Math.floor(Math.random() * 3) + 1;
+
+        this.size = layer; // Veličina: 1px, 2px ili 3px
+        this.speed = layer * 50; // Brzina: 50, 100 ili 150 px/s
+        
+        // Daleke zvezde su tamnije, bliske su svetlije
+        this.alpha = 0.3 + (layer * 0.2); 
+    }
+
+    update(dt) {
+        this.y += this.speed * dt;
+
+        // Ako izađe sa dna ekrana, resetuj je na vrh
+        if (this.y > this.screenHeight) {
+            this.reset(false);
+        }
+    }
+
+    draw(ctx) {
+        // Crtamo kvadrat jer je brže od kruga (arc), a na 2px se ne vidi razlika
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+}
+
+export class StarfieldSystem {
+    constructor(game) {
+        this.game = game;
+        this.stars = [];
+        this.count = 100;
+        this.baseSpeed = 10; 
+        this.speedMultiplier = 1; 
+        this.color = '#ffffff'; 
+        
+        // --- WARP VARIJABLE ---
+        this.isWarping = false;
+        this.warpFactor = 1; // 1 = Normalno, >1 = Razvučeno
+
+        for (let i = 0; i < this.count; i++) {
+            this.stars.push({
+                x: Math.random() * this.game.engine.canvas.width,
+                y: Math.random() * this.game.engine.canvas.height,
+                size: Math.random() * 2 + 0.5,
+                speed: Math.random() * 20 + 5
+            });
+        }
+    }
+
+    setAtmosphere(color, speedMult) {
+        this.color = color;
+        this.speedMultiplier = speedMult;
+    }
+
+    // Poziva se kad boss umre
+    setWarp(active) {
+        this.isWarping = active;
+    }
+
+    update(dt) {
+        const height = this.game.engine.canvas.height;
+        const width = this.game.engine.canvas.width;
+
+        // Ako je Warp uključen, faktor raste do 50, inače pada na 1
+        const targetWarp = this.isWarping ? 40 : 1;
+        this.warpFactor += (targetWarp - this.warpFactor) * 2 * dt; // Glatka tranzicija
+
+        this.stars.forEach(star => {
+            // Brzina se drastično povećava tokom warpa
+            let currentSpeed = star.speed * this.speedMultiplier * this.warpFactor;
+            
+            star.y += currentSpeed * dt;
+
+            if (star.y > height) {
+                star.y = 0;
+                star.x = Math.random() * width;
+            }
+        });
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.strokeStyle = this.color; // Za linije
+        
+        this.stars.forEach(star => {
+            ctx.globalAlpha = Math.random() * 0.5 + 0.5;
+
+            if (this.warpFactor > 2) {
+                // --- WARP MODE: CRTAMO LINIJE ---
+                ctx.lineWidth = star.size;
+                ctx.beginPath();
+                ctx.moveTo(star.x, star.y);
+                // Dužina linije zavisi od brzine warpa
+                ctx.lineTo(star.x, star.y - (this.warpFactor * 2)); 
+                ctx.stroke();
+            } else {
+                // --- NORMAL MODE: CRTAMO TAČKE ---
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+            }
+        });
+        ctx.globalAlpha = 1.0;
+    }
+}
+--------------------
+END OF FILE: src\systems\Starfield.js
+

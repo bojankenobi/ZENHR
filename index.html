@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    
+    <link rel="manifest" href="manifest.json">
+    <title>Cognitive Odyssey | HR Assessment Tool</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+</head>
+<body>
+    
+    <div id="game-container">
+        <div id="ui-layer">
+            
+            <div id="intro-screen">
+                
+                <div id="name-input-section" class="terminal-box">
+                    <h1 class="glitch-text">IDENTIFIKACIJA KANDIDATA</h1>
+                    <div class="input-group">
+                        <label>UNESITE IME I PREZIME:</label>
+                        <input type="text" id="candidate-name" placeholder="Npr: Bojan Pejić" autocomplete="off">
+                    </div>
+                    <button id="next-to-briefing-btn">POTVRDI IDENTITET</button>
+                </div>
+
+                <div id="briefing-section" class="terminal-box" style="display: none;">
+                    <h1 class="glitch-text">COGNITIVE ODYSSEY</h1>
+                    <h2>[ CANDIDATE EVALUATION PROTOCOL ]</h2>
+                    
+                    <div class="instructions-content">
+                        <p><span class="highlight">MISIJA:</span> Odbrana sektora uz minimalnu kolateralnu štetu.</p>
+                        
+                        <p><span class="highlight">1. KONTROLE:</span><br>
+                        • <b>Desktop:</b> Strelice (ili WASD) za kretanje. SPACE za pucanje.<br>
+                        • <b>Mobilni:</b> Virtuelni džojstik (levo) i FIRE dugme (desno).</p>
+                        
+                        <p><span class="highlight">2. PRAVILA ANGAŽOVANJA:</span><br>
+                        • <span style="color: #ff0055;">NEPRIJATELJI:</span> Uništiti sve za maksimalni skor.<br>
+                        • <span style="color: #ffffff;">CIVILI (Beli sa krstom):</span> <b>STRIKTNA ZABRANA PUCANJA!</b></p>
+                        
+                        <p><span class="highlight">3. RADNA MEMORIJA:</span><br>
+                        • Zapamtite šifru (A, B, C, X) prikazanu na početku svakog nivoa.<br>
+                        • Kada sistem blokira, unesite je što brže možete.</p>
+                    </div>
+            
+                    <button id="start-mission-btn">RAZUMEM - POKRENI EVALUACIJU</button>
+                </div>
+            </div>
+            
+            <div id="hud" style="display: none;">SCORE: <span id="score">0</span></div>
+            <div id="lives-display" style="display: none;">HP: <span id="lives-count">❤️❤️❤️</span></div>
+
+            <div id="memory-preview-screen" style="display: none;">
+                <div class="memory-container">
+                    <p>MEMORIZE SEQUENCE:</p>
+                    <h1 id="big-memory-sequence">A B X</h1>
+                </div>
+            </div>
+
+            <div id="memory-input-overlay" style="display: none;">
+                <div class="neon-box">
+                    <h2 id="memory-prompt-text">SYSTEM LOCK</h2>
+                    <div id="input-display">_ _ _</div>
+                    <p>RE-ENTER SECURITY SEQUENCE</p>
+                    
+                    <div id="virtual-keyboard">
+                        <button class="mem-btn" data-key="KeyA">A</button>
+                        <button class="mem-btn" data-key="KeyB">B</button>
+                        <button class="mem-btn" data-key="KeyC">C</button>
+                        <button class="mem-btn" data-key="KeyX">X</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="level-screen" style="display: none;">
+                <h2 id="level-title">SECTOR 1</h2>
+                <p id="level-subtitle">GET READY</p>
+            </div>
+
+            <div id="boss-hud" style="display: none;">
+                <div class="boss-name">⚠️ MOTHERSHIP DETECTED ⚠️</div>
+                <div class="hp-bar-bg">
+                    <div id="hp-bar-fill"></div>
+                </div>
+            </div>
+
+            <div id="game-over-screen" style="display: none;">
+                <h1>EVALUATION ENDED</h1>
+                <p>FINAL SCORE: <span id="final-score">0</span></p>
+                <button id="restart-btn">REBOOT SYSTEM</button>
+            </div>
+
+            <div id="mobile-controls">
+                <div id="joystick-zone">
+                    <div id="joystick-base">
+                        <div id="joystick-stick"></div>
+                    </div>
+                </div>
+                <div id="fire-btn">FIRE</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="src/Game.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+              .then(reg => console.log('Service Worker registrovan!', reg))
+              .catch(err => console.log('Greška pri registraciji SW:', err));
+          });
+        }
+      </script>
+</body>
+</html>
