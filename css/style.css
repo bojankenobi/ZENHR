@@ -449,3 +449,11 @@ canvas {
 #candidate-name::placeholder {
     color: #1a5c3a;
 }
+
+#freeze-timer-cont {
+    color: #ff0055;
+    font-size: 24px;
+    margin: 10px 0;
+    text-shadow: 0 0 10px #ff0055;
+    font-weight: bold;
+}

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'retro-shooter-v1';
+const CACHE_NAME = 'retro-shooter-v2';
 const ASSETS = [
   './',
   './index.html',

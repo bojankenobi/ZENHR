@@ -13,10 +13,10 @@ export class InputHandler {
             this.keys[e.code] = true;
             if (e.code === 'Space') this.isFiring = true;
             
-            // 1. Provera za Radnu Memoriju (A, B, C, X)
+            // Provera za Radnu Memoriju
             this.handleMemoryInput(e.code);
             
-            // 2. Provera za brojeve (0-9)
+            // Provera za bonuse (brojevi)
             if (e.key >= '0' && e.key <= '9') {
                 this.handleNumberInput(parseInt(e.key));
             }
@@ -29,11 +29,10 @@ export class InputHandler {
 
         this.setupTouchControls();
 
-        // Povezivanje virtuelne tastature za mobilne / touch uređaje
+        // Podrška za kliktanje na virtuelnoj tastaturi
         document.querySelectorAll('.mem-btn').forEach(btn => {
-            // Koristimo 'pointerdown' jer pokriva i mis i touch, pre nego sto element izgubi fokus
             btn.addEventListener('pointerdown', (e) => {
-                e.preventDefault(); // Sprečava zumiranje na dupli tap
+                e.preventDefault(); 
                 const keyCode = btn.getAttribute('data-key');
                 this.handleMemoryInput(keyCode);
             });
@@ -41,13 +40,11 @@ export class InputHandler {
     }
 
     handleMemoryInput(keyCode) {
-        // PROVERA: Da li je test uopšte aktivan?
         if (!this.game.levels || !this.game.levels.isMemoryInputActive) return;
 
         const levelSys = this.game.levels;
         let char = "";
-
-        // Mapiranje tastera
+        
         if (keyCode === 'KeyA') char = "A";
         else if (keyCode === 'KeyB') char = "B";
         else if (keyCode === 'KeyC') char = "C";
@@ -55,40 +52,31 @@ export class InputHandler {
 
         if (char !== "") {
             this.inputBuffer += char;
-            console.log(`%c [INPUT]: Dodato ${char} | Trenutni buffer: ${this.inputBuffer}`, "color: #00ffff");
-
-            // Ažuriranje vizuelnog prikaza na ekranu
+            
+            // Ažuriranje prikaza ukucanih slova na kartici
             const display = document.getElementById('input-display');
             if (display) {
-                // Prikazuje ukucana slova + donje crte za preostala
                 const remaining = levelSys.currentSequence.length - this.inputBuffer.length;
                 display.innerText = this.inputBuffer + "_ ".repeat(Math.max(0, remaining));
             }
 
-            // Provera da li je sekvenca kompletirana
+            // Provera kada završi unos
             if (this.inputBuffer.length === levelSys.currentSequence.length) {
                 const isCorrect = this.inputBuffer === levelSys.currentSequence;
                 
-                // Slanje rezultata u analitiku
                 if (this.game.analytics) {
                     this.game.analytics.recordMemoryAttempt(isCorrect);
                 }
 
-                // Feedback i zatvaranje prozora
-                setTimeout(() => {
-                    const overlay = document.getElementById('memory-input-overlay');
-                    if (overlay) overlay.style.display = 'none';
-                    
-                    this.inputBuffer = "";
-                    levelSys.isMemoryInputActive = false;
-                }, 400);
-
+                // Odmah pošalji signal u LevelSystem
                 if (isCorrect) {
-                    console.log("%c [SUCCESS]: Šifra ispravna!", "color: #00ff00; font-weight: bold;");
-                    if (this.game.sound) this.game.sound.playBossHit();
+                    const remaining = this.game.levels.freezeTimer;
+                    if (this.game.analytics.recordTimePressureResilience) {
+                        this.game.analytics.recordTimePressureResilience(remaining);
+                    }
+                    this.game.levels.closeMemoryInput(true);
                 } else {
-                    console.log("%c [FAIL]: Šifra pogrešna!", "color: #ff0000; font-weight: bold;");
-                    this.game.shake(20);
+                    this.game.levels.closeMemoryInput(false);
                 }
             }
         }
@@ -130,7 +118,6 @@ export class InputHandler {
         this.axis.x = 0;
         this.axis.y = 0;
 
-        // Kretanje tastaturom (radi nezavisno od unosa šifre)
         if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.axis.x = -1;
         if (this.keys['ArrowRight'] || this.keys['KeyD']) this.axis.x = 1;
         if (this.keys['ArrowUp'] || this.keys['KeyW']) this.axis.y = -1;
@@ -153,13 +140,13 @@ export class InputHandler {
         const stick = document.getElementById('joystick-stick');
         const fireBtn = document.getElementById('fire-btn');
         if (!zone || !stick || !fireBtn) return;
-
+        
         zone.addEventListener('touchstart', (e) => {
             e.preventDefault();
             this.touchId = e.changedTouches[0].identifier;
             this.handleJoystickMove(e.changedTouches[0], zone, stick, 35);
         }, { passive: false });
-
+        
         zone.addEventListener('touchmove', (e) => {
             e.preventDefault();
             for (let i = 0; i < e.changedTouches.length; i++) {
@@ -168,7 +155,7 @@ export class InputHandler {
                 }
             }
         }, { passive: false });
-
+        
         const stopTouch = (e) => {
             e.preventDefault();
             this.touchId = null;
@@ -181,12 +168,12 @@ export class InputHandler {
             e.preventDefault(); 
             this.isFiring = true; 
         }, { passive: false });
+        
         fireBtn.addEventListener('touchend', (e) => { 
             e.preventDefault(); 
             this.isFiring = false; 
         });
     }
-    
 
     handleJoystickMove(touch, zone, stick, maxRadius) {
         const rect = zone.getBoundingClientRect();

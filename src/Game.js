@@ -18,34 +18,27 @@ import { CollisionSystem } from './systems/Collision.js';
 import { AnalyticsSystem } from './systems/AnalyticsSystem.js';
 
 // --- SUPABASE INICIJALIZACIJA ---
-// Mora biti van klase da bi bio dostupan odmah nakon učitavanja skripte iz index.html
 let supabaseClient;
 const initSupabase = () => {
     if (window.supabase) {
-        // Tvoji ključevi iz projekta
         const supabaseUrl = 'https://kpqqeiaqezkpubspoplg.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwcXFlaWFxZXprcHVic3BvcGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDQ3NDksImV4cCI6MjA5MjcyMDc0OX0.QCfAZim-Zo9A4ElE8b7gmCmycd5hjwHIntvwiU6iiRo';
         supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
     } else {
-        console.error("Supabase biblioteka nije učitana! Proverite redosled skripti u index.html");
+        console.error("Supabase biblioteka nije učitana!");
     }
 };
 initSupabase();
 
 class Game {
     constructor() {
-        // GLAVNI OSIGURAČ - Dok ovo ne postane true, igra ne mrda!
-        this.gameActive = false; 
-
-        // 1. Inicijalizacija Engine-a i osnovnih kontrolera
+        this.gameActive = false;
         this.engine = new Engine('gameCanvas');
         this.sound = new SoundSystem();
         
-        // 2. Inicijalizacija Analitike i Inputa
         this.analytics = new AnalyticsSystem(this);
         this.input = new InputHandler(this);
 
-        // 3. Inicijalizacija Sistema
         this.starfield = new StarfieldSystem(this);
         this.background = new BackgroundSystem(this);
         this.levels = new LevelSystem(this);
@@ -55,11 +48,9 @@ class Game {
         this.particles = new ParticleSystem(this);
         this.collision = new CollisionSystem(this);
 
-        // 4. Glavni Akteri
         this.player = new Player(this);
         this.boss = new Boss(this);
 
-        // 5. Game State
         this.score = 0;
         this.isGameOver = false;
         this.bossDefeated = false;
@@ -68,44 +59,32 @@ class Game {
         this.fadeOpacity = 0;
         this.isFadingIn = false;
 
-        // --- UI KONTROLERI (IDENTIFIKACIJA -> BRIEFING -> START) ---
         const nextBtn = document.getElementById('next-to-briefing-btn');
         const startBtn = document.getElementById('start-mission-btn');
         const nameInput = document.getElementById('candidate-name');
         const nameSection = document.getElementById('name-input-section');
         const briefingSection = document.getElementById('briefing-section');
 
-        // KORAK 1: Od imena do pravila igre
         if (nextBtn) {
             nextBtn.addEventListener('click', () => {
                 if (!nameInput || nameInput.value.trim().length < 3) {
                     alert("Molimo Vas unesite puno ime i prezime.");
                     return;
                 }
-                // Čuvamo ime kandidata za HR izveštaj
                 this.analytics.candidateName = nameInput.value;
-                
-                // Menjamo ekran unutar crnog intro kontejnera
                 if (nameSection) nameSection.style.display = 'none';
                 if (briefingSection) briefingSection.style.display = 'block';
             });
         }
 
-        // KORAK 2: Od pravila igre do same igre
         if (startBtn) {
             startBtn.addEventListener('click', () => {
-                // 1. Skloni crni intro ekran zauvek
                 document.getElementById('intro-screen').style.display = 'none';
-                
-                // 2. Prikaži HUD elemente sada kada je ekran čist
                 document.getElementById('hud').style.display = 'block';
                 document.getElementById('lives-display').style.display = 'block';
                 
-                // 3. Pokreni Audio i otključaj logiku igre
                 this.sound.resume(); 
-                this.gameActive = true; // OTKLJUČAVANJE MOTORA!
-                
-                // 4. Startuj nivo (Ovo okida prvo šifru, pa borbu)
+                this.gameActive = true; 
                 this.levels.start(); 
             });
         }
@@ -115,17 +94,12 @@ class Game {
             restartBtn.addEventListener('click', () => this.resetGame());
         }
 
-        // --- Povezivanje petlji motora ---
         this.engine.onUpdate = (dt) => this.update(dt);
         this.engine.onDraw = (ctx) => this.draw(ctx);
-
-        // Engine kreće da radi odmah, ali mi kontrolišemo ŠTA se vrti kroz this.gameActive
         this.engine.start();
     }
 
-    shake(amount) { 
-        this.shakeIntensity = amount;
-    }
+    shake(amount) { this.shakeIntensity = amount; }
 
     setFadeOverlay(opacity) {
         this.fadeOpacity = opacity;
@@ -139,9 +113,7 @@ class Game {
 
     async sendAssessmentData(report) {
         const candidateName = this.analytics.candidateName || "Anonimni Kandidat";
-        console.log(`%c [DB]: Arhiviranje rezultata za: ${candidateName}`, "color: #00ffff;");
-
-        // Pucamo u hr_reports (kako smo dogovorili za HR bazu)
+        
         if (supabaseClient) {
             const { error } = await supabaseClient
                 .from('hr_reports') 
@@ -154,14 +126,18 @@ class Game {
                     accuracy: report.accuracy,
                     stress_resilience: report.stressResilience,
                     stability_index: report.emotionalStabilityIndex,
-                    duration: report.gameDuration
+                    duration: report.gameDuration,
+                    time_pressure_resilience: report.timePressureResilience || "N/A",
+                    
+                    // --- NOVI PODACI ZA GRAFIKONE (JSONB KOLONE) ---
+                    stress_timeline: report.stressTimeline,
+                    spatial_data: report.spatialData,
+                    fatigue_index: report.fatigueIndex,
+                    reaction_distribution: report.reactionDistribution
                 }]);
-
-            if (error) {
-                console.error("Greška pri upisu u bazu:", error.message);
-            } else {
-                console.log("%c [SUCCESS]: HR Izveštaj je trajno sačuvan u bazi.", "color: #00ff00; font-weight: bold;");
-            }
+    
+            if (error) console.error("Greška pri upisu u bazu:", error.message);
+            else console.log("%c [SUCCESS]: Prošireni HR Izveštaj arhiviran.", "color: #00ff00;");
         }
     }
 
@@ -210,7 +186,6 @@ class Game {
 
     displayHRLog(report, status) {
         const color = status === "SUCCESS" ? "#00ff00" : "#ff0055";
-        
         console.groupCollapsed(`%c 📊 [HR ASSESSMENT REPORT] - MISSION ${status} `, `color: #000; background: ${color}; font-weight: bold; font-size: 14px; padding: 4px;`);
         
         const allMetrics = {
@@ -226,12 +201,12 @@ class Game {
             "10. Pretrpljena Šteta (Udarci)": report.totalDamageTaken,
             "11. Otpornost na Stres": report.stressResilience,
             "12. Intenzitet Kretanja (Jitter)": report.movementIntensity,
-            "13. Indeks Emocionalne Stabilnosti": report.emotionalStabilityIndex
+            "13. Indeks Emocionalne Stabilnosti": report.emotionalStabilityIndex,
+            "14. Otpornost na Vremenski Pritisak": report.timePressureResilience
         };
 
         console.table(allMetrics);
         console.groupEnd();
-
         this.sendAssessmentData(report);
     }
 
@@ -242,8 +217,7 @@ class Game {
         
         const scoreEl = document.getElementById('score');
         if (scoreEl) scoreEl.innerText = "0";
-        
-        // Sačuvaj ime iz prethodne sesije pre rekreiranja analitike
+
         const lastName = this.analytics.candidateName;
         this.analytics = new AnalyticsSystem(this);
         this.analytics.candidateName = lastName;
@@ -278,14 +252,13 @@ class Game {
     }
 
     update(dt) {
-        // OSIGURAČ: Ako korisnik nije potvrdio intro, vrti se samo zvezdano nebo.
         if (!this.gameActive) {
             this.starfield.update(dt);
-            return; // Prekida dalje ažuriranje!
+            return; 
         }
 
         if (this.isGameOver) return;
-        
+
         if (this.isFadingIn) {
             this.fadeOpacity -= dt * 0.8;
             if (this.fadeOpacity <= 0) {
@@ -295,6 +268,15 @@ class Game {
         }
 
         this.input.update();
+
+        // --- APSOLUTNO ZAMRZAVANJE IGRE TOKOM HR TESTA ---
+        if (this.levels.isMemoryPaused && this.levels.isMemoryPaused()) {
+            // Izbačeno je ažuriranje starfield-a. SADA SVE FIZIČKI STOJI!
+            this.levels.update(dt); // Vrti se SAMO crveni tajmer za šifru
+            return; // BLOKIRA SVE OSTALO: nema metaka, neprijatelja, ni pozadine!
+        }
+
+        // --- NORMALNA IGRA (Kada nema kartice za unos) ---
         this.starfield.update(dt);
         this.background.update(dt);
         this.levels.update(dt);
@@ -318,17 +300,14 @@ class Game {
     }
 
     draw(ctx) {
-        // Uvek očisti ekran crnom bojom prvo
         ctx.fillStyle = '#050505';
         ctx.fillRect(0, 0, this.engine.canvas.width, this.engine.canvas.height);
 
-        // OSIGURAČ: Ne crtamo letelice, neprijatelje i metke ako igra nije aktivna
         if (!this.gameActive) {
             this.starfield.draw(ctx);
-            return; // Prekida dalje crtanje!
+            return; 
         }
 
-        // Standardno crtanje kada je igra aktivna
         ctx.save();
         if (this.shakeIntensity > 0) {
             const dx = (Math.random() - 0.5) * this.shakeIntensity;

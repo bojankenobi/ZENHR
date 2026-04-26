@@ -2,10 +2,16 @@
 <html lang="sr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>COGNITIVE ODYSSEY | HR ANALYTICS TERMINAL</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="theme-color" content="#050505">
+
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
         :root {
             --neon-green: #00ff41;
@@ -13,75 +19,85 @@
             --terminal-red: #ff0055;
             --cyan: #00ffff;
         }
-
+    
         body {
             background-color: var(--dark-bg);
             color: var(--neon-green);
             font-family: 'VT323', monospace;
-            margin: 20px;
+            margin: 10px;
             text-transform: uppercase;
+            font-size: 16px;
         }
-
+    
+        /* Responzivni Header */
         header {
             border-bottom: 2px solid var(--neon-green);
-            padding-bottom: 10px;
+            padding: 10px 0;
             margin-bottom: 20px;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column; /* Na mobilnom idu jedan ispod drugog */
+            gap: 10px;
             align-items: center;
         }
-
-        .glitch { font-size: 2rem; text-shadow: 2px 2px var(--terminal-red); }
-
-        /* Kontejner za 3 grafikona */
+    
+        @media (min-width: 768px) {
+            header { flex-direction: row; justify-content: space-between; }
+            body { margin: 20px; }
+        }
+    
+        .glitch { font-size: 1.5rem; text-align: center; text-shadow: 2px 2px var(--terminal-red); }
+        @media (min-width: 768px) { .glitch { font-size: 2.2rem; } }
+    
+        /* Responzivna mreža grafikona */
         .charts-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr; /* Default za mobilni: jedna kolona */
             gap: 15px;
             margin-bottom: 30px;
         }
-
+    
+        @media (min-width: 1024px) {
+            .charts-grid { grid-template-columns: 1fr 1fr 1fr; } /* Desktop: tri kolone */
+        }
+    
         .chart-container {
             background: rgba(0, 255, 65, 0.05);
             border: 1px solid rgba(0, 255, 65, 0.3);
-            padding: 15px;
-            height: 350px;
+            padding: 10px;
+            height: 300px; /* Smanjeno za mobilni */
             display: flex;
             justify-content: center;
             align-items: center;
         }
-
-        table {
+    
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+    
+        /* Responzivna tabela */
+        .table-responsive {
             width: 100%;
-            border-collapse: collapse;
+            overflow-x: auto; /* Omogućava horizontalni skrol na malim ekranima */
+            -webkit-overflow-scrolling: touch;
             background: rgba(0, 255, 65, 0.05);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            margin-bottom: 50px;
         }
-
-        th { background: var(--neon-green); color: var(--dark-bg); padding: 10px; text-align: left; }
-        td { padding: 8px; border-bottom: 1px solid rgba(0, 255, 65, 0.2); cursor: pointer; }
-        tr:hover { background: rgba(0, 255, 65, 0.15); }
-
-        .selected-row { background: rgba(0, 255, 255, 0.1) !important; border-left: 5px solid var(--cyan); }
-
-        .status-pill { padding: 2px 8px; border-radius: 4px; font-weight: bold; }
-        .high-performer { color: var(--neon-green); border: 1px solid var(--neon-green); }
-        .critical { color: var(--terminal-red); border: 1px solid var(--terminal-red); }
-
+    
+        table { width: 100%; border-collapse: collapse; min-width: 800px; } /* Min-width čuva strukturu */
+        th { background: var(--neon-green); color: var(--dark-bg); padding: 12px 8px; text-align: left; }
+        td { padding: 10px 8px; border-bottom: 1px solid rgba(0, 255, 65, 0.2); font-size: 1.1rem; }
+    
         .refresh-btn {
-            background: transparent; color: var(--neon-green); border: 1px solid var(--neon-green);
-            padding: 8px 16px; cursor: pointer; font-family: inherit; font-size: 1.2rem;
+            width: 100%; /* Na mobilnom dugme je preko celog ekrana */
+            background: transparent;
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            padding: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 1.2rem;
         }
-        .refresh-btn:hover { background: var(--neon-green); color: var(--dark-bg); }
-
-        body::before {
-            content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            z-index: 10; background-size: 100% 4px, 3px 100%; pointer-events: none;
-        }
-        
-        /* Da osiguramo da platno grafikona uvek bude iznad scanlines (zbog hover interakcija) */
-        canvas { position: relative; z-index: 20; }
+    
+        @media (min-width: 768px) { .refresh-btn { width: auto; } }
     </style>
 </head>
 <body>
@@ -92,53 +108,58 @@
 </header>
 
 <div class="charts-grid">
-    <div class="chart-container">
-        <canvas id="radarChart"></canvas>
-    </div>
-    <div class="chart-container">
-        <canvas id="scatterChart"></canvas>
-    </div>
-    <div class="chart-container">
-        <canvas id="comparisonChart"></canvas>
-    </div>
+    <div class="chart-container"><canvas id="radarChart"></canvas></div>
+    <div class="chart-container"><canvas id="scatterChart"></canvas></div>
+    <div class="chart-container"><canvas id="comparisonChart"></canvas></div>
+    <div class="chart-container"><canvas id="stressChart"></canvas></div>
+    <div class="chart-container"><canvas id="fatigueChart"></canvas></div>
+    <div class="chart-container"><canvas id="reactionChart"></canvas></div>
+    <div class="chart-container"><canvas id="spatialHeatmap"></canvas></div>
+    
 </div>
 
 <div id="stats-summary" style="margin-bottom: 10px; font-size: 1.2rem;">
     UKUPNO EVALUACIJA: <span id="total-count">0</span> | TRENUTNI PROFIL: <span id="active-candidate" style="color:var(--cyan); font-weight: bold;">--</span>
 </div>
 
-<table>
-    <thead>
-        <tr>
-            <th>DATUM</th>
-            <th>KANDIDAT</th>
-            <th>MEMORIJA</th>
-            <th>STABILNOST</th>
-            <th>REAKCIJA</th>
-            <th>PRECIZNOST</th>
-            <th>STATUS</th>
-        </tr>
-    </thead>
-    <tbody id="reports-body">
-        <tr><td colspan="7">POVEZIVANJE SA SERVEROM...</td></tr>
-    </tbody>
-</table>
+<div style="overflow-x: auto; position: relative; z-index: 20;">
+    <div class="table-responsive"></div>
+    <table>
+        <thead>
+            <tr>
+                <th>DATUM</th>
+                <th>KANDIDAT</th>
+                <th>MEMORIJA</th>
+                <th>STABILNOST</th>
+                <th>REAKCIJA</th>
+                <th>PRECIZNOST</th>
+                <th>STRES TEST</th>
+                <th>STATUS</th>
+            </tr>
+        </thead>
+        <tbody id="reports-body">
+            <tr><td colspan="8">POVEZIVANJE SA SERVEROM...</td></tr>
+        </tbody>
+    </table>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    // Supabase konekcija
     const supabaseUrl = 'https://kpqqeiaqezkpubspoplg.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwcXFlaWFxZXprcHVic3BvcGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNDQ3NDksImV4cCI6MjA5MjcyMDc0OX0.QCfAZim-Zo9A4ElE8b7gmCmycd5hjwHIntvwiU6iiRo';
     
-    // Sprečavamo dupliranu deklaraciju
     if (!window._supabaseInstance) {
         window._supabaseInstance = window.supabase.createClient(supabaseUrl, supabaseKey);
     }
     const db = window._supabaseInstance;
 
+    // Definicije svih grafikona
     let radarChart, scatterChart, comparisonChart;
+    let stressChart, fatigueChart, reactionChart, spatialHeatmap;
     let allData = [];
 
-    // Globalna konfiguracija za Chart.js fontove (da se slaže uz retro estetiku)
     Chart.defaults.font.family = "'VT323', monospace";
     Chart.defaults.color = '#888';
 
@@ -149,10 +170,10 @@
             allData = data;
             renderTable(data);
             updateGlobalCharts(data);
-            if (data.length > 0) selectCandidate(data[0]); // Selektuj najnovijeg automatski
+            if (data.length > 0) selectCandidate(data[0]); 
         } catch (error) {
             console.error("Greška:", error);
-            document.getElementById('reports-body').innerHTML = `<tr><td colspan="7" style="color: var(--terminal-red)">GREŠKA PRI PREUZIMANJU: ${error.message}</td></tr>`;
+            document.getElementById('reports-body').innerHTML = `<tr><td colspan="8" style="color: var(--terminal-red)">GREŠKA PRI PREUZIMANJU: ${error.message}</td></tr>`;
         }
     }
 
@@ -163,17 +184,15 @@
 
         data.forEach((report) => {
             const date = new Date(report.created_at).toLocaleDateString('sr-RS');
-            
-            // Hirurško parsiranje stringova u brojeve
             const rawStability = parseFloat(report.stability_index) || 0;
             const rawAccuracy = parseFloat(report.accuracy) || 0;
             const rawMemory = parseFloat(report.memory_accuracy) || 0;
             const rawReaction = parseFloat(report.reaction_time) || 0;
+            const stressTest = report.time_pressure_resilience || 'N/A';
 
             const row = document.createElement('tr');
             row.onclick = () => selectCandidate(report, row);
             
-            // Logika za status na osnovu čistih brojeva
             let statusClass = "high-performer";
             let statusText = "PASSED";
             if (rawStability < 0.4 || rawAccuracy < 50) {
@@ -188,6 +207,7 @@
                 <td>${(rawStability * 100).toFixed(1)}%</td>
                 <td>${Math.round(rawReaction)} ms</td>
                 <td>${Math.round(rawAccuracy)}%</td>
+                <td class="stress-text">${stressTest}</td>
                 <td><span class="status-pill ${statusClass}">${statusText}</span></td>
             `;
             tbody.appendChild(row);
@@ -195,158 +215,179 @@
     }
 
     function selectCandidate(report, rowElement) {
-        // UI selekcija (ako smo kliknuli na red)
         if(rowElement) {
             document.querySelectorAll('tr').forEach(r => r.classList.remove('selected-row'));
             rowElement.classList.add('selected-row');
         } else {
-            // Ako je učitano programski (na startu), selektujemo prvi red u HTML-u
             const firstRow = document.querySelector('#reports-body tr');
             if(firstRow) firstRow.classList.add('selected-row');
         }
         
         document.getElementById('active-candidate').innerText = report.candidate_name;
 
-        // Sirovi podaci za kalkulacije
+        // Podaci za osnovni kognitivni profil
         const rawMemory = parseFloat(report.memory_accuracy) || 0;
         const rawReaction = parseFloat(report.reaction_time) || 0;
         const rawStability = parseFloat(report.stability_index) || 0;
         const rawAccuracy = parseFloat(report.accuracy) || 0;
         const stressScore = report.stress_resilience === "STABLE" ? 90 : 40;
-
-        // Normalizujemo vreme reakcije (manje ms = bolji skor od 0 do 100) za Radar
         const reactionScore = Math.max(0, 100 - (rawReaction / 10));
         
+        // Osveži sve grafikone
         updateRadarChart([rawMemory, reactionScore, rawStability * 100, rawAccuracy, stressScore]);
         updateComparisonChart(report);
+        updateStressTimeline(report.stressTimeline);
+        updateFatigueIndex(report.fatigueIndex);
+        updateReactionDistribution(report.reactionDistribution);
+        updateSpatialHeatmap(report.spatialData);
     }
 
+    // --- 1. KOGNITIVNI RADAR ---
     function updateRadarChart(scores) {
         const ctx = document.getElementById('radarChart').getContext('2d');
         if (radarChart) radarChart.destroy();
-
         radarChart = new Chart(ctx, {
             type: 'radar',
             data: {
                 labels: ['MEMORIJA', 'REAKCIJA', 'STABILNOST', 'PRECIZNOST', 'OTPORNOST'],
                 datasets: [{
-                    label: 'KOGNITIVNI PROFIL',
+                    label: 'INDIVIDUALNI PROFIL',
                     data: scores,
                     backgroundColor: 'rgba(0, 255, 65, 0.2)',
                     borderColor: '#00ff41',
                     pointBackgroundColor: '#00ffff'
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { 
-                    r: { 
-                        min: 0, 
-                        max: 100, 
-                        ticks: { display: false }, 
-                        grid: { color: 'rgba(0,255,65,0.1)' }, 
-                        angleLines: { color: 'rgba(0,255,65,0.1)' },
-                        pointLabels: { color: '#00ff41', font: { size: 14 } }
-                    } 
-                },
-                plugins: { legend: { labels: { color: '#00ff41', font: { size: 18 } } } }
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                scales: { r: { min: 0, max: 100, ticks: { display: false }, grid: { color: 'rgba(0,255,65,0.1)' }, angleLines: { color: 'rgba(0,255,65,0.1)' } } },
+                plugins: { legend: { labels: { color: '#00ff41' } } }
             }
         });
     }
 
+    // --- 2. GLOBALNI SCATTER ---
     function updateGlobalCharts(data) {
         const ctx = document.getElementById('scatterChart').getContext('2d');
         if (scatterChart) scatterChart.destroy();
-
-        const scatterData = data.map(r => ({
-            x: parseFloat(r.reaction_time) || 0,
-            y: parseFloat(r.accuracy) || 0
-        }));
-
+        const scatterData = data.map(r => ({ x: parseFloat(r.reaction_time) || 0, y: parseFloat(r.accuracy) || 0 }));
         scatterChart = new Chart(ctx, {
             type: 'scatter',
-            data: {
-                datasets: [{
-                    label: 'SVI KANDIDATI (BRZINA vs PRECIZNOST)',
-                    data: scatterData,
-                    backgroundColor: '#ff0055',
-                    pointRadius: 6,
-                    pointHoverRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { title: { display: true, text: 'REAKCIJA (ms)', color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#00ff41'} },
-                    y: { title: { display: true, text: 'PRECIZNOST (%)', color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#00ff41'} }
-                },
-                plugins: { legend: { labels: { color: '#00ff41', font: { size: 16 } } } }
+            data: { datasets: [{ label: 'GRUPNI PREGLED (MS vs %)', data: scatterData, backgroundColor: '#ff0055', pointRadius: 6 }] },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                scales: { x: { title: { display: true, text: 'REAKCIJA (ms)' } }, y: { title: { display: true, text: 'PRECIZNOST (%)' } } }
             }
         });
     }
 
+    // --- 3. BAR COMPARISON ---
     function updateComparisonChart(report) {
         const ctx = document.getElementById('comparisonChart').getContext('2d');
         if (comparisonChart) comparisonChart.destroy();
-
-        // Kalkulacija globalnog proseka baze
-        const avgAcc = allData.reduce((acc, r) => acc + (parseFloat(r.accuracy) || 0), 0) / allData.length;
-        const avgReact = allData.reduce((acc, r) => acc + (parseFloat(r.reaction_time) || 0), 0) / allData.length;
-
-        const indAcc = parseFloat(report.accuracy) || 0;
-        const indReact = parseFloat(report.reaction_time) || 0;
-
-        // Normalizujemo brzinu za Bar chart da bi viši stubić značio bolji rezultat (od 1000ms max)
-        const indReactNorm = Math.max(0, (1000 - indReact) / 10);
+        const avgAcc = allData.reduce((acc, r) => acc + (parseFloat(r.accuracy) || 0), 0) / (allData.length || 1);
+        const avgReact = allData.reduce((acc, r) => acc + (parseFloat(r.reaction_time) || 0), 0) / (allData.length || 1);
+        const indReactNorm = Math.max(0, (1000 - parseFloat(report.reaction_time)) / 10);
         const avgReactNorm = Math.max(0, (1000 - avgReact) / 10);
 
         comparisonChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['PRECIZNOST (%)', 'BRZINA (Norm)'],
+                labels: ['PRECIZNOST', 'BRZINA (NORM)'],
                 datasets: [
-                    {
-                        label: 'KANDIDAT',
-                        data: [indAcc, indReactNorm],
-                        backgroundColor: '#00ffff' // Cijan za individualnog kandidata
-                    },
-                    {
-                        label: 'PROSEK GRUPE',
-                        data: [avgAcc, avgReactNorm],
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)' // Siva/Providna za prosek
-                    }
+                    { label: 'KANDIDAT', data: [parseFloat(report.accuracy), indReactNorm], backgroundColor: '#00ffff' },
+                    { label: 'PROSEK GRUPE', data: [avgAcc, avgReactNorm], backgroundColor: 'rgba(255, 255, 255, 0.2)' }
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#00ff41' } },
-                    x: { ticks: { color: '#00ff41', font: { size: 16 } }, grid: { display: false } }
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } } }
+        });
+    }
+
+    // --- 4. STRES KRIVA (NOVO) ---
+    function updateStressTimeline(timeline) {
+        const ctx = document.getElementById('stressChart').getContext('2d');
+        if (stressChart) stressChart.destroy();
+        const data = timeline || [];
+        stressChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map((_, i) => `Test ${i+1}`),
+                datasets: [{ label: 'SEKUNDE PRE ROKA', data: data, borderColor: '#00ffff', fill: true, backgroundColor: 'rgba(0, 255, 255, 0.1)', tension: 0.4 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'STRES KRIVA (TIME RESILIENCE)' } } }
+        });
+    }
+
+    // --- 5. KOGNITIVNI ZAMOR (NOVO) ---
+    function updateFatigueIndex(index) {
+        const ctx = document.getElementById('fatigueChart').getContext('2d');
+        if (fatigueChart) fatigueChart.destroy();
+        fatigueChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['START', 'MID', 'END'],
+                datasets: [{ label: 'PRECIZNOST %', data: index || [0,0,0], backgroundColor: ['#00ff41', '#ffff00', '#ff0055'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'INDEX KOGNITIVNOG ZAMORA' } } }
+        });
+    }
+
+    // --- 6. DISTRIBUCIJA REAKCIJE (NOVO) ---
+    function updateReactionDistribution(times) {
+        const ctx = document.getElementById('reactionChart').getContext('2d');
+        if (reactionChart) reactionChart.destroy();
+        const sortedTimes = (times || []).sort((a,b) => a - b);
+        reactionChart = new Chart(ctx, {
+            type: 'bubble', // Simulacija distribucije preko bubble tačaka radi retro efekta
+            data: {
+                datasets: [{
+                    label: 'REAKCIJE (ms)',
+                    data: sortedTimes.map((t, i) => ({ x: t, y: i, r: 5 })),
+                    backgroundColor: '#ff0055'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'DISTRIBUCIJA BRZINE REAKCIJE' } } }
+        });
+    }
+
+    // --- 7. HEATMAP KRETANJA (NOVO) ---
+    function updateSpatialHeatmap(spatialData) {
+        const ctx = document.getElementById('spatialHeatmap').getContext('2d');
+        if (spatialHeatmap) spatialHeatmap.destroy();
+        spatialHeatmap = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'POZICIONIRANJE',
+                    data: spatialData || [],
+                    backgroundColor: 'rgba(0, 255, 65, 0.4)',
+                    pointRadius: 3
+                }]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                scales: { 
+                    x: { min: 0, max: 600, display: false }, 
+                    y: { min: 0, max: 800, reverse: true, display: false } 
                 },
-                plugins: {
-                    legend: { labels: { color: '#00ff41', font: { size: 16 } } }
-                }
+                plugins: { title: { display: true, text: 'HEATMAP KRETANJA (X/Y)' } }
             }
         });
     }
 
-    // Inicijalno učitavanje prilikom otvaranja panela
     fetchData();
-    
-    // Automatsko osvežavanje svakih 30 sekundi
     setInterval(fetchData, 30000);
 </script>
+
 <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('PWA Admin: Service Worker registrovan!'))
-          .catch(err => console.error('PWA Admin: Greška:', err));
-      });
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('PWA Admin: Service Worker registrovan!'))
+                .catch(err => console.error('PWA Admin Greška:', err));
+        });
     }
-  </script>
+</script>
+
 </body>
 </html>
