@@ -63,18 +63,28 @@ export class AnalyticsSystem {
             const dx = Math.abs(currentX - this.metrics.lastPosition.x);
             const dy = Math.abs(currentY - this.metrics.lastPosition.y);
             const dist = Math.sqrt(dx * dx + dy * dy);
-            this.metrics.totalDistanceTraveled += dist; // [cite: 550, 551]
+            
+            // Ukupan pređeni put za neurometriju [cite: 551]
+            this.metrics.totalDistanceTraveled += dist;
 
-            // Čuvamo koordinate za Heatmap (svakih n frejmova ili na promenu)
-            if (this.metrics.movementHistory.length < 500) { 
-                this.metrics.movementHistory.push({ x: Math.round(currentX), y: Math.round(currentY) });
+            // --- OPTIMIZACIJA ZA HEATMAP ---
+            // Umesto prvih 500 frejmova, uzimamo nasumičnih 10% kretanja kroz celu partiju.
+            // Ovo sprečava da se niz popuni u prve 3 sekunde i ostane NULL za ostatak igre.
+            if (this.metrics.movementHistory.length < 500 && Math.random() > 0.9) { 
+                this.metrics.movementHistory.push({ 
+                    x: Math.round(currentX), 
+                    y: Math.round(currentY) 
+                });
             }
 
+            // Detekcija jitter-a (nervoznog kretanja) [cite: 552]
             if (dist > 5) { 
-                this.metrics.overActivityScore += 0.01; // [cite: 552]
+                this.metrics.overActivityScore += 0.01;
             }
         }
-        this.metrics.lastPosition = { x: currentX, y: currentY }; // [cite: 553]
+        
+        // Ažuriranje poslednje pozicije za sledeći frejm [cite: 553]
+        this.metrics.lastPosition = { x: currentX, y: currentY };
     }
 
     // Pomoćna funkcija za računanje preciznosti u određenom vremenskom intervalu (Kognitivni zamor)

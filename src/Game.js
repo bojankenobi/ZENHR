@@ -110,6 +110,15 @@ class Game {
         this.fadeOpacity = 1;
         this.isFadingIn = true;
     }
+    async displayHRLog(report, status) {
+        const color = status === "SUCCESS" ? "#00ff00" : "#ff0055";
+        console.log("%c [SYSTEM]: Priprema izveštaja za slanje...", "color: orange;");
+        
+        // Čekamo da se podaci pošalju pre nego što bilo šta drugo uradimo
+        await this.sendAssessmentData(report);
+        
+        console.log("%c [SYSTEM]: Slanje završeno.", "color: #00ff00;");
+    }
 
     async sendAssessmentData(report) {
         const candidateName = this.analytics.candidateName || "Anonimni Kandidat";

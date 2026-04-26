@@ -215,33 +215,38 @@
     }
 
     function selectCandidate(report, rowElement) {
-        if(rowElement) {
-            document.querySelectorAll('tr').forEach(r => r.classList.remove('selected-row'));
-            rowElement.classList.add('selected-row');
-        } else {
-            const firstRow = document.querySelector('#reports-body tr');
-            if(firstRow) firstRow.classList.add('selected-row');
-        }
-        
-        document.getElementById('active-candidate').innerText = report.candidate_name;
-
-        // Podaci za osnovni kognitivni profil
-        const rawMemory = parseFloat(report.memory_accuracy) || 0;
-        const rawReaction = parseFloat(report.reaction_time) || 0;
-        const rawStability = parseFloat(report.stability_index) || 0;
-        const rawAccuracy = parseFloat(report.accuracy) || 0;
-        const stressScore = report.stress_resilience === "STABLE" ? 90 : 40;
-        const reactionScore = Math.max(0, 100 - (rawReaction / 10));
-        
-        // Osveži sve grafikone
-        updateRadarChart([rawMemory, reactionScore, rawStability * 100, rawAccuracy, stressScore]);
-        updateComparisonChart(report);
-        updateStressTimeline(report.stressTimeline);
-        updateFatigueIndex(report.fatigueIndex);
-        updateReactionDistribution(report.reactionDistribution);
-        updateSpatialHeatmap(report.spatialData);
+    if(rowElement) {
+        document.querySelectorAll('tr').forEach(r => r.classList.remove('selected-row'));
+        rowElement.classList.add('selected-row');
     }
+    
+    document.getElementById('active-candidate').innerText = report.candidate_name;
 
+    // --- PARSIRANJE SA ZAŠTITOM OD NULL VREDNOSTI ---
+    // Ako je podatak u bazi NULL ili nije stigao, dajemo prazan niz [] da Chart.js ne pukne
+    const stressData = report.stress_timeline || [];
+    const fatigueData = report.fatigue_index || [0, 0, 0];
+    const reactionData = report.reaction_distribution || [];
+    const spatialData = report.spatial_data || [];
+
+    // Osvežavanje osnovnih metrika
+    const rawMemory = parseFloat(report.memory_accuracy) || 0;
+    const rawReaction = parseFloat(report.reaction_time) || 0;
+    const rawStability = parseFloat(report.stability_index) || 0;
+    const rawAccuracy = parseFloat(report.accuracy) || 0;
+    const stressScore = report.stress_resilience === "STABLE" ? 90 : 40;
+    const reactionScore = Math.max(0, 100 - (rawReaction / 10));
+    
+    // POZIVANJE FUNKCIJA ZA CRTANJE
+    updateRadarChart([rawMemory, reactionScore, rawStability * 100, rawAccuracy, stressScore]);
+    updateComparisonChart(report);
+    
+    // NOVI GRAFIKONI - Ovde šaljemo podatke direktno iz baze
+    updateStressTimeline(stressData);
+    updateFatigueIndex(fatigueData);
+    updateReactionDistribution(reactionData);
+    updateSpatialHeatmap(spatialData);
+    }
     // --- 1. KOGNITIVNI RADAR ---
     function updateRadarChart(scores) {
         const ctx = document.getElementById('radarChart').getContext('2d');
